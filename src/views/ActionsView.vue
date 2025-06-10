@@ -436,8 +436,8 @@ function formatDisplayTime(timeString) {
 onMounted(() => {
   loadStatus()
   
-  // Actualizar estado cada 10 segundos
-  statusInterval = setInterval(loadStatus, 10000)
+  // Actualizar estado cada 7.5 segundos
+  statusInterval = setInterval(loadStatus, 7500)
 })
 
 onUnmounted(() => {
