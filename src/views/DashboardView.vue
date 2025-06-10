@@ -102,6 +102,12 @@
         </div>
 
         <div class="bg-white rounded-lg shadow p-4">
+          <p class="text-sm text-gray-600">Capacidad de a Bateria {{ data.batteryCapacity }} se aplica % para determinar umbral absorcion  </p>
+          <p class="text-xl font-semibold">{{ data.thresholdPercentage }} %</p>
+        </div>
+
+
+        <div class="bg-white rounded-lg shadow p-4">
           <p class="text-sm text-gray-600">Corriente umbral (Depende de % capacidad bateria) en Absorcion(si se esta por debajo pasa a Float) </p>
           <p class="text-xl font-semibold">{{ data.absorptionCurrentThreshold_mA }} mA</p>
         </div>
