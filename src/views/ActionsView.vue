@@ -28,7 +28,7 @@
               </p>
             </div>
             <div 
-              class="w-4 h-4 rounded-full"
+              class="w-4 h-4 rounded-full transition-colors"
               :class="actionsStatus?.load_control_state ? 'bg-green-500' : 'bg-gray-400'"
             ></div>
           </div>
@@ -139,22 +139,35 @@
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Apagado Programado</h3>
           
           <div class="space-y-4">
-            <!-- Enable/Disable Toggle -->
+            <!-- Enable/Disable Toggle - CORREGIDO -->
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-gray-700">Habilitar apagado programado</span>
+              <span class="text-sm font-medium text-gray-700">Activar apagado automático</span>
               <button
                 @click="toggleScheduledOff"
                 type="button"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                :class="scheduledOff.enabled ? 'bg-blue-600' : 'bg-gray-200'"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                :class="[
+                  scheduledOff.enabled ? 'bg-blue-600' : 'bg-gray-200',
+                  isToggling ? 'opacity-75' : ''
+                ]"
+                :disabled="isToggling"
                 :aria-pressed="scheduledOff.enabled"
               >
-                <span class="sr-only">Habilitar apagado programado</span>
+                <span class="sr-only">
+                  {{ scheduledOff.enabled ? 'Desactivar' : 'Activar' }} apagado programado
+                </span>
                 <span
-                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-lg"
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 shadow-lg"
                   :class="scheduledOff.enabled ? 'translate-x-6' : 'translate-x-1'"
                 />
               </button>
+            </div>
+
+            <!-- Estado actual del toggle -->
+            <div class="text-xs text-gray-500">
+              Estado: <span class="font-medium" :class="scheduledOff.enabled ? 'text-green-600' : 'text-gray-600'">
+                {{ scheduledOff.enabled ? '✅ ACTIVADO' : '⭕ DESACTIVADO' }}
+              </span>
             </div>
 
             <!-- Time Configuration -->
@@ -163,7 +176,7 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700">Hora de inicio</label>
                   <input
-                    v-model="scheduledOff.startTime"
+                    v-model="localStartTime"
                     type="time"
                     @change="updateSchedule"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -173,7 +186,7 @@
                 <div>
                   <label class="block text-sm font-medium text-gray-700">Hora de fin</label>
                   <input
-                    v-model="scheduledOff.endTime"
+                    v-model="localEndTime"
                     type="time"
                     @change="updateSchedule"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -184,30 +197,47 @@
               <!-- Schedule Info -->
               <div class="p-3 bg-gray-50 rounded-lg">
                 <p class="text-sm text-gray-600">
-                  La carga se apagará automáticamente todos los días de 
-                  <span class="font-semibold">{{ formatDisplayTime(scheduledOff.startTime) }}</span> a 
-                  <span class="font-semibold">{{ formatDisplayTime(scheduledOff.endTime) }}</span>
+                  ⏰ La carga se apagará automáticamente todos los días de 
+                  <span class="font-semibold text-blue-700">{{ formatDisplayTime(localStartTime) }}</span> a 
+                  <span class="font-semibold text-blue-700">{{ formatDisplayTime(localEndTime) }}</span>
                 </p>
               </div>
 
-              <!-- Cancel/Reactivate buttons -->
-              <div v-if="scheduledOff.cancelled" class="flex space-x-3">
+              <!-- Cancel/Reactivate buttons - MEJORADOS -->
+              <div v-if="scheduledOff.cancelled" class="space-y-2">
+                <div class="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p class="text-sm text-orange-800">
+                    ⚠️ <strong>Programación cancelada</strong> por acción manual
+                  </p>
+                </div>
                 <button
-                  @click="scheduledOff.reactivateSchedule"
-                  class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                  @click="reactivateScheduling"
+                  class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
                 >
-                  Reactivar Programación
+                  🔄 Reactivar Programación Automática
                 </button>
               </div>
               
-              <div v-else-if="scheduledOff.enabled" class="flex space-x-3">
+              <div v-else-if="scheduledOff.enabled" class="space-y-2">
+                <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p class="text-sm text-green-800">
+                    ✅ <strong>Programación activa</strong> - Se ejecutará automáticamente
+                  </p>
+                </div>
                 <button
-                  @click="scheduledOff.cancelSchedule"
-                  class="flex-1 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
+                  @click="cancelScheduling"
+                  class="w-full bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
                 >
-                  Cancelar Programación
+                  ❌ Desactivar Programación
                 </button>
               </div>
+            </div>
+
+            <!-- Información cuando está desactivado -->
+            <div v-if="!scheduledOff.enabled" class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p class="text-sm text-gray-600">
+                ℹ️ El apagado automático está desactivado. Actívalo arriba para programar horarios.
+              </p>
             </div>
           </div>
         </div>
@@ -273,17 +303,22 @@
       </div>
     </div>
 
-    <!-- Messages -->
+    <!-- Messages - MEJORADOS -->
     <transition name="fade">
-      <div v-if="message" class="fixed bottom-4 right-4 px-4 py-3 rounded shadow-lg z-50" :class="messageClass">
-        <p>{{ message }}</p>
+      <div v-if="message" class="fixed bottom-4 right-4 px-6 py-4 rounded-lg shadow-xl z-50 max-w-sm" :class="messageClass">
+        <div class="flex items-center space-x-2">
+          <span v-if="messageType === 'success'" class="text-green-600">✅</span>
+          <span v-else-if="messageType === 'error'" class="text-red-600">❌</span>
+          <span v-else class="text-blue-600">ℹ️</span>
+          <p class="font-medium">{{ message }}</p>
+        </div>
       </div>
     </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import api from '@/services/api'
 import { useScheduledOff } from '@/composables/useScheduledOff'
 
@@ -295,13 +330,31 @@ const loading = ref(false)
 const message = ref('')
 const messageType = ref('success')
 const actionsStatus = ref(null)
-const showDebugInfo = ref(false) // Debug manual
+const showDebugInfo = ref(false)
 const lastStatusUpdate = ref('')
+const isToggling = ref(false)
+
+// Estados locales para los tiempos (para evitar conflictos de reactividad)
+const localStartTime = ref('00:00')
+const localEndTime = ref('06:00')
 
 // Scheduled Off composable
 const scheduledOff = useScheduledOff()
 
 let statusInterval = null
+
+// Watchers para sincronizar estado
+watch(() => scheduledOff.startTime, (newVal) => {
+  if (newVal && newVal !== localStartTime.value) {
+    localStartTime.value = newVal
+  }
+}, { immediate: true })
+
+watch(() => scheduledOff.endTime, (newVal) => {
+  if (newVal && newVal !== localEndTime.value) {
+    localEndTime.value = newVal
+  }
+}, { immediate: true })
 
 // Computed
 const isValidDuration = computed(() => {
@@ -331,9 +384,15 @@ const statusTextClass = computed(() => {
 })
 
 const messageClass = computed(() => {
-  return messageType.value === 'success' 
-    ? 'bg-green-100 border border-green-400 text-green-700'
-    : 'bg-red-100 border border-red-400 text-red-700'
+  const baseClasses = 'border-2'
+  switch (messageType.value) {
+    case 'success':
+      return `${baseClasses} bg-green-100 border-green-400 text-green-800`
+    case 'error':
+      return `${baseClasses} bg-red-100 border-red-400 text-red-800`
+    default:
+      return `${baseClasses} bg-blue-100 border-blue-400 text-blue-800`
+  }
 })
 
 // Métodos
@@ -375,7 +434,6 @@ async function toggleLoad() {
       timestamp: new Date().toISOString()
     })
     
-    // Apagar carga por la duración especificada
     const response = await api.toggleLoad(hours.value, minutes.value, seconds.value)
     
     console.log(`✅ [MANUAL] Comando enviado exitosamente:`, {
@@ -383,10 +441,9 @@ async function toggleLoad() {
       timestamp: new Date().toISOString()
     })
     
-    showMessage('Carga apagada correctamente', 'success')
+    showMessage(`⏱️ Carga apagada por ${hours.value}h ${minutes.value}m ${seconds.value}s`, 'success')
     await loadStatus()
     
-    // Notificar al scheduled off sobre acción manual
     scheduledOff.handleManualOverride()
     
     // Resetear inputs
@@ -417,7 +474,6 @@ async function cancelOff() {
       timestamp: new Date().toISOString()
     })
     
-    // Forzar reactivación inmediata (1 segundo = encender después de 1s)
     const response = await api.toggleLoad(0, 0, 1)
     
     console.log(`✅ [MANUAL] Reactivación enviada exitosamente:`, {
@@ -425,10 +481,9 @@ async function cancelOff() {
       timestamp: new Date().toISOString()
     })
     
-    showMessage('Carga reactivada correctamente', 'success')
+    showMessage('🔌 Carga reactivada inmediatamente', 'success')
     await loadStatus()
     
-    // Notificar al scheduled off sobre acción manual
     scheduledOff.handleManualOverride()
   } catch (error) {
     console.error(`❌ [MANUAL] Error al reactivar:`, {
@@ -453,7 +508,6 @@ function quickAction(h, m, s) {
     timestamp: new Date().toISOString()
   })
   
-  // Configurar duración y ejecutar apagado temporal
   hours.value = h
   minutes.value = m
   seconds.value = s
@@ -469,7 +523,6 @@ async function quickReactivate() {
       timestamp: new Date().toISOString()
     })
     
-    // Forzar reactivación inmediata (1 segundo = encender después de 1s)
     const response = await api.toggleLoad(0, 0, 1)
     
     console.log(`✅ [QUICK] Reactivación rápida exitosa:`, {
@@ -477,10 +530,9 @@ async function quickReactivate() {
       timestamp: new Date().toISOString()
     })
     
-    showMessage('¡Carga reactivada inmediatamente!', 'success')
+    showMessage('🚀 ¡Carga reactivada instantáneamente!', 'success')
     await loadStatus()
     
-    // Notificar al scheduled off sobre acción manual
     scheduledOff.handleManualOverride()
   } catch (error) {
     console.error(`❌ [QUICK] Error en reactivación rápida:`, {
@@ -510,7 +562,6 @@ async function overrideScheduled() {
       timestamp: new Date().toISOString()
     })
     
-    // Forzar reactivación inmediata (1 segundo = encender después de 1s)
     const response = await api.toggleLoad(0, 0, 1)
     
     console.log(`✅ [OVERRIDE] Override exitoso:`, {
@@ -519,7 +570,7 @@ async function overrideScheduled() {
     })
     
     scheduledOff.handleManualOverride()
-    showMessage('Apagado programado anulado y carga reactivada', 'success')
+    showMessage('⚡ Programación anulada - Carga reactivada manualmente', 'success')
     await loadStatus()
   } catch (error) {
     console.error(`❌ [OVERRIDE] Error en override:`, {
@@ -536,22 +587,89 @@ async function overrideScheduled() {
 }
 
 function updateSchedule() {
-  scheduledOff.setSchedule(scheduledOff.startTime, scheduledOff.endTime)
-  showMessage('Horario programado actualizado', 'success')
-}
-
-function toggleScheduledOff() {
-  console.log(`🎛️ [UI] Toggle programado clicked - Estado actual:`, {
-    enabled: scheduledOff.enabled,
-    timestamp: new Date().toISOString()
+  console.log(`⏰ [SCHEDULE] Actualizando horarios:`, {
+    startTime: localStartTime.value,
+    endTime: localEndTime.value
   })
   
-  scheduledOff.toggleEnabled()
+  scheduledOff.setSchedule(localStartTime.value, localEndTime.value)
+  showMessage(`⏰ Horario actualizado: ${formatDisplayTime(localStartTime.value)} - ${formatDisplayTime(localEndTime.value)}`, 'success')
+}
+
+// FUNCIÓN CORREGIDA para el toggle
+async function toggleScheduledOff() {
+  if (isToggling.value) return
   
-  const newState = scheduledOff.enabled ? 'habilitado' : 'deshabilitado'
-  showMessage(`Apagado programado ${newState}`, 'success')
+  isToggling.value = true
   
-  console.log(`✅ [UI] Toggle completado - Nuevo estado: ${scheduledOff.enabled}`)
+  try {
+    const previousState = scheduledOff.enabled
+    
+    console.log(`🎛️ [UI] Toggle programado clicked - Estado actual:`, {
+      enabled: previousState,
+      timestamp: new Date().toISOString()
+    })
+    
+    // Forzar actualización inmediata de la UI
+    await nextTick()
+    
+    scheduledOff.toggleEnabled()
+    
+    // Esperar un tick para que se actualice la reactividad
+    await nextTick()
+    
+    const newState = scheduledOff.enabled
+    const action = newState ? 'ACTIVADO' : 'DESACTIVADO'
+    const emoji = newState ? '✅' : '⭕'
+    
+    showMessage(`${emoji} Apagado automático ${action}`, 'success')
+    
+    console.log(`✅ [UI] Toggle completado:`, {
+      previousState,
+      newState,
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error(`❌ [UI] Error en toggle:`, error)
+    showMessage('Error al cambiar configuración', 'error')
+  } finally {
+    // Delay para mostrar la animación
+    setTimeout(() => {
+      isToggling.value = false
+    }, 300)
+  }
+}
+
+// Funciones MEJORADAS para reactivación/cancelación
+async function reactivateScheduling() {
+  try {
+    console.log(`🔄 [SCHEDULE] Reactivando programación`)
+    
+    scheduledOff.reactivateSchedule()
+    
+    showMessage('🔄 ¡Programación automática reactivada! Se ejecutará según el horario configurado', 'success')
+    
+    console.log(`✅ [SCHEDULE] Programación reactivada exitosamente`)
+  } catch (error) {
+    console.error(`❌ [SCHEDULE] Error al reactivar:`, error)
+    showMessage('Error al reactivar programación', 'error')
+  }
+}
+
+async function cancelScheduling() {
+  try {
+    console.log(`❌ [SCHEDULE] Cancelando programación`)
+    
+    scheduledOff.cancelSchedule()
+    
+    showMessage('❌ Programación automática desactivada. No se ejecutará hasta que la reactives', 'success')
+    
+    console.log(`✅ [SCHEDULE] Programación cancelada exitosamente`)
+  } catch (error) {
+    console.error(`❌ [SCHEDULE] Error al cancelar:`, error)
+    showMessage('Error al cancelar programación', 'error')
+  }
 }
 
 function showMessage(msg, type = 'success') {
@@ -560,7 +678,7 @@ function showMessage(msg, type = 'success') {
   
   setTimeout(() => {
     message.value = ''
-  }, 3000)
+  }, 4000) // Aumentado a 4 segundos para leer mejor
 }
 
 function formatTime(seconds) {
@@ -571,9 +689,7 @@ function formatTime(seconds) {
   return `${h}h ${m}m ${s}s`
 }
 
-// Función corregida para formatear tiempo
 function formatDisplayTime(timeString) {
-  // Validar que timeString sea una cadena válida
   if (!timeString || typeof timeString !== 'string' || !timeString.includes(':')) {
     return '--:-- --'
   }
@@ -619,5 +735,12 @@ onUnmounted(() => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+/* Animación mejorada para el toggle */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
 }
 </style>
