@@ -1,6 +1,16 @@
 <template>
   <div>
-    <h2 class="text-2xl font-bold text-gray-900 mb-6">Control de Carga</h2>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Control de Carga</h2>
+      
+      <!-- Debug Toggle Button -->
+      <button
+        @click="showDebugInfo = !showDebugInfo"
+        class="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+      >
+        {{ showDebugInfo ? '🐛 Ocultar Debug' : '🔍 Mostrar Debug' }}
+      </button>
+    </div>
 
     <div class="space-y-6">
       <!-- Current Status -->
@@ -29,6 +39,32 @@
           <p :class="scheduledOff.statusClass" class="text-sm font-medium">
             {{ scheduledOff.statusText }}
           </p>
+        </div>
+
+        <!-- Debug Info -->
+        <div v-if="showDebugInfo" class="mb-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
+          <h4 class="text-xs font-semibold text-yellow-800 mb-2">🐛 DEBUG INFO</h4>
+          <div class="text-xs text-yellow-700 space-y-1">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="font-semibold">Scheduled Off:</p>
+                <p><strong>Initialized:</strong> {{ scheduledOff.isInitialized }}</p>
+                <p><strong>Enabled:</strong> {{ scheduledOff.enabled }}</p>
+                <p><strong>Cancelled:</strong> {{ scheduledOff.cancelled }}</p>
+                <p><strong>In Range:</strong> {{ scheduledOff.isInScheduledRange }}</p>
+                <p><strong>Controlling:</strong> {{ scheduledOff.isActivelyControlling }}</p>
+                <p><strong>Schedule:</strong> {{ scheduledOff.startTime }} - {{ scheduledOff.endTime }}</p>
+              </div>
+              <div>
+                <p class="font-semibold">API Status:</p>
+                <p><strong>Load State:</strong> {{ actionsStatus?.load_control_state ? 'ON' : 'OFF' }}</p>
+                <p><strong>Temp Off:</strong> {{ actionsStatus?.temporary_load_off ? 'YES' : 'NO' }}</p>
+                <p><strong>Remaining:</strong> {{ actionsStatus?.load_off_remaining_seconds || 0 }}s</p>
+                <p><strong>Current Time:</strong> {{ new Date().toLocaleTimeString() }}</p>
+                <p><strong>Last Update:</strong> {{ lastStatusUpdate }}</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -107,12 +143,15 @@
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-gray-700">Habilitar apagado programado</span>
               <button
-                @click="scheduledOff.toggleEnabled"
-                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                @click="toggleScheduledOff"
+                type="button"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 :class="scheduledOff.enabled ? 'bg-blue-600' : 'bg-gray-200'"
+                :aria-pressed="scheduledOff.enabled"
               >
+                <span class="sr-only">Habilitar apagado programado</span>
                 <span
-                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-lg"
                   :class="scheduledOff.enabled ? 'translate-x-6' : 'translate-x-1'"
                 />
               </button>
@@ -256,6 +295,8 @@ const loading = ref(false)
 const message = ref('')
 const messageType = ref('success')
 const actionsStatus = ref(null)
+const showDebugInfo = ref(false) // Debug manual
+const lastStatusUpdate = ref('')
 
 // Scheduled Off composable
 const scheduledOff = useScheduledOff()
@@ -298,10 +339,26 @@ const messageClass = computed(() => {
 // Métodos
 async function loadStatus() {
   try {
+    console.log(`📊 [ACTIONS VIEW] Cargando estado de la API...`)
+    
     const response = await api.getActionsStatus()
     actionsStatus.value = response
+    lastStatusUpdate.value = new Date().toLocaleTimeString()
+    
+    console.log(`✅ [ACTIONS VIEW] Estado cargado:`, {
+      loadControlState: response.load_control_state,
+      temporaryLoadOff: response.temporary_load_off,
+      remainingSeconds: response.load_off_remaining_seconds,
+      timestamp: new Date().toISOString()
+    })
+    
   } catch (error) {
-    console.error('Error loading status:', error)
+    console.error('❌ [ACTIONS VIEW] Error loading status:', {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      timestamp: new Date().toISOString()
+    })
   }
 }
 
@@ -311,8 +368,21 @@ async function toggleLoad() {
   loading.value = true
   
   try {
+    console.log(`🔄 [MANUAL] Enviando comando de apagado temporal:`, {
+      hours: hours.value,
+      minutes: minutes.value,
+      seconds: seconds.value,
+      timestamp: new Date().toISOString()
+    })
+    
     // Apagar carga por la duración especificada
-    await api.toggleLoad(hours.value, minutes.value, seconds.value)
+    const response = await api.toggleLoad(hours.value, minutes.value, seconds.value)
+    
+    console.log(`✅ [MANUAL] Comando enviado exitosamente:`, {
+      response,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage('Carga apagada correctamente', 'success')
     await loadStatus()
     
@@ -324,6 +394,13 @@ async function toggleLoad() {
     minutes.value = 0
     seconds.value = 0
   } catch (error) {
+    console.error(`❌ [MANUAL] Error al enviar comando:`, {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage(error.response?.data?.detail || 'Error al apagar carga', 'error')
   } finally {
     loading.value = false
@@ -334,14 +411,33 @@ async function cancelOff() {
   loading.value = true
   
   try {
+    console.log(`🔄 [MANUAL] Enviando comando de reactivación:`, {
+      command: 'toggleLoad(0, 0, 1)',
+      reason: 'Cancelar apagado temporal',
+      timestamp: new Date().toISOString()
+    })
+    
     // Forzar reactivación inmediata (1 segundo = encender después de 1s)
-    await api.toggleLoad(0, 0, 1)
+    const response = await api.toggleLoad(0, 0, 1)
+    
+    console.log(`✅ [MANUAL] Reactivación enviada exitosamente:`, {
+      response,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage('Carga reactivada correctamente', 'success')
     await loadStatus()
     
     // Notificar al scheduled off sobre acción manual
     scheduledOff.handleManualOverride()
   } catch (error) {
+    console.error(`❌ [MANUAL] Error al reactivar:`, {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage(error.response?.data?.detail || 'Error al reactivar carga', 'error')
   } finally {
     loading.value = false
@@ -349,6 +445,14 @@ async function cancelOff() {
 }
 
 function quickAction(h, m, s) {
+  console.log(`🎯 [QUICK] Acción rápida seleccionada:`, {
+    hours: h,
+    minutes: m,
+    seconds: s,
+    totalSeconds: h * 3600 + m * 60 + s,
+    timestamp: new Date().toISOString()
+  })
+  
   // Configurar duración y ejecutar apagado temporal
   hours.value = h
   minutes.value = m
@@ -360,14 +464,32 @@ async function quickReactivate() {
   loading.value = true
   
   try {
+    console.log(`🔄 [QUICK] Reactivación rápida:`, {
+      command: 'toggleLoad(0, 0, 1)',
+      timestamp: new Date().toISOString()
+    })
+    
     // Forzar reactivación inmediata (1 segundo = encender después de 1s)
-    await api.toggleLoad(0, 0, 1)
+    const response = await api.toggleLoad(0, 0, 1)
+    
+    console.log(`✅ [QUICK] Reactivación rápida exitosa:`, {
+      response,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage('¡Carga reactivada inmediatamente!', 'success')
     await loadStatus()
     
     // Notificar al scheduled off sobre acción manual
     scheduledOff.handleManualOverride()
   } catch (error) {
+    console.error(`❌ [QUICK] Error en reactivación rápida:`, {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage(error.response?.data?.detail || 'Error al reactivar', 'error')
   } finally {
     loading.value = false
@@ -378,12 +500,35 @@ async function overrideScheduled() {
   loading.value = true
   
   try {
+    console.log(`🔄 [OVERRIDE] Anulando apagado programado:`, {
+      command: 'toggleLoad(0, 0, 1)',
+      scheduledState: {
+        enabled: scheduledOff.enabled,
+        inRange: scheduledOff.isInScheduledRange,
+        controlling: scheduledOff.isActivelyControlling
+      },
+      timestamp: new Date().toISOString()
+    })
+    
     // Forzar reactivación inmediata (1 segundo = encender después de 1s)
-    await api.toggleLoad(0, 0, 1)
+    const response = await api.toggleLoad(0, 0, 1)
+    
+    console.log(`✅ [OVERRIDE] Override exitoso:`, {
+      response,
+      timestamp: new Date().toISOString()
+    })
+    
     scheduledOff.handleManualOverride()
     showMessage('Apagado programado anulado y carga reactivada', 'success')
     await loadStatus()
   } catch (error) {
+    console.error(`❌ [OVERRIDE] Error en override:`, {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      timestamp: new Date().toISOString()
+    })
+    
     showMessage(error.response?.data?.detail || 'Error al anular programación', 'error')
   } finally {
     loading.value = false
@@ -393,6 +538,20 @@ async function overrideScheduled() {
 function updateSchedule() {
   scheduledOff.setSchedule(scheduledOff.startTime, scheduledOff.endTime)
   showMessage('Horario programado actualizado', 'success')
+}
+
+function toggleScheduledOff() {
+  console.log(`🎛️ [UI] Toggle programado clicked - Estado actual:`, {
+    enabled: scheduledOff.enabled,
+    timestamp: new Date().toISOString()
+  })
+  
+  scheduledOff.toggleEnabled()
+  
+  const newState = scheduledOff.enabled ? 'habilitado' : 'deshabilitado'
+  showMessage(`Apagado programado ${newState}`, 'success')
+  
+  console.log(`✅ [UI] Toggle completado - Nuevo estado: ${scheduledOff.enabled}`)
 }
 
 function showMessage(msg, type = 'success') {
@@ -434,10 +593,17 @@ function formatDisplayTime(timeString) {
 
 // Lifecycle
 onMounted(() => {
+  console.log(`🚀 [ACTIONS VIEW] Componente montado - Iniciando carga de estado`)
+  
   loadStatus()
   
-  // Actualizar estado cada 7.5 segundos
-  statusInterval = setInterval(loadStatus, 7500)
+  // Actualizar estado cada 9 segundos
+  statusInterval = setInterval(() => {
+    console.log(`🔄 [ACTIONS VIEW] Actualizando estado automáticamente`)
+    loadStatus()
+  }, 9000)
+  
+  console.log(`✅ [ACTIONS VIEW] Polling configurado cada 9 segundos`)
 })
 
 onUnmounted(() => {
