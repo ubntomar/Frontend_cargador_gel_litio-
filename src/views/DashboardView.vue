@@ -21,7 +21,7 @@
           title="Panel Solar"
           :value="data.voltagePanel"
           unit="V"
-          :subtitle="`${(data.panelToBatteryCurrent / 1000).toFixed(2)} A`"
+          :subtitle="`${(data.panelToBatteryCurrent )} mA`"
           :icon-bg-class="'bg-yellow-100'"
           :icon-class="'text-yellow-600'"
         />
