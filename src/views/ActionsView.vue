@@ -311,6 +311,7 @@ async function toggleLoad() {
   loading.value = true
   
   try {
+    // Apagar carga por la duración especificada
     await api.toggleLoad(hours.value, minutes.value, seconds.value)
     showMessage('Carga apagada correctamente', 'success')
     await loadStatus()
@@ -333,6 +334,7 @@ async function cancelOff() {
   loading.value = true
   
   try {
+    // Forzar reactivación inmediata (1 segundo = encender después de 1s)
     await api.toggleLoad(0, 0, 1)
     showMessage('Carga reactivada correctamente', 'success')
     await loadStatus()
@@ -347,6 +349,7 @@ async function cancelOff() {
 }
 
 function quickAction(h, m, s) {
+  // Configurar duración y ejecutar apagado temporal
   hours.value = h
   minutes.value = m
   seconds.value = s
@@ -357,6 +360,7 @@ async function quickReactivate() {
   loading.value = true
   
   try {
+    // Forzar reactivación inmediata (1 segundo = encender después de 1s)
     await api.toggleLoad(0, 0, 1)
     showMessage('¡Carga reactivada inmediatamente!', 'success')
     await loadStatus()
@@ -374,6 +378,7 @@ async function overrideScheduled() {
   loading.value = true
   
   try {
+    // Forzar reactivación inmediata (1 segundo = encender después de 1s)
     await api.toggleLoad(0, 0, 1)
     scheduledOff.handleManualOverride()
     showMessage('Apagado programado anulado y carga reactivada', 'success')

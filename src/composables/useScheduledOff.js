@@ -11,6 +11,7 @@ export function useScheduledOff() {
   const isActivelyControlling = ref(false)
   const lastActionTime = ref(null)
   const isInitialized = ref(false)
+  const lastCalculatedEnd = ref(null) // Para evitar comandos duplicados
 
   // Timer para verificar cada minuto
   let checkInterval = null
@@ -23,7 +24,37 @@ export function useScheduledOff() {
     endTime: 'scheduledOff_endTime',
     cancelled: 'scheduledOff_cancelled',
     isActivelyControlling: 'scheduledOff_isActivelyControlling',
-    lastActionTime: 'scheduledOff_lastActionTime'
+    lastActionTime: 'scheduledOff_lastActionTime',
+    lastCalculatedEnd: 'scheduledOff_lastCalculatedEnd'
+  }
+
+  // Función para calcular duración hasta el final del rango
+  function calculateDurationUntilEnd() {
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    
+    const [endHour, endMin] = endTime.value.split(':').map(Number)
+    const [startHour, startMin] = startTime.value.split(':').map(Number)
+    
+    const startMinutes = startHour * 60 + startMin
+    const endMinutes = endHour * 60 + endMin
+
+    let targetMinutes = endMinutes
+
+    // Manejar rangos que cruzan medianoche
+    if (startMinutes > endMinutes) {
+      if (currentMinutes >= startMinutes) {
+        targetMinutes = endMinutes + 24 * 60 // Mañana siguiente
+      }
+    }
+
+    let diffMinutes = targetMinutes - currentMinutes
+    if (diffMinutes <= 0) diffMinutes += 24 * 60
+
+    const hours = Math.floor(diffMinutes / 60)
+    const minutes = diffMinutes % 60
+
+    return { hours, minutes, totalMinutes: diffMinutes }
   }
 
   // Computed properties
@@ -145,21 +176,36 @@ export function useScheduledOff() {
       const hasTemporaryOff = status.temporary_load_off
 
       if (isInScheduledRange.value) {
-        // Deberíamos estar apagados
-        if (isLoadOn && !hasTemporaryOff) {
-          console.log('🔴 Ejecutando apagado programado...')
-          await api.toggleLoad(0, 0, 1) // Apagar por 1 segundo para activar apagado
-          isActivelyControlling.value = true
-          lastActionTime.value = new Date().toISOString()
-          saveToStorage()
+        // Estamos en rango programado - deberíamos estar apagados
+        if (isLoadOn && !hasTemporaryOff && !isActivelyControlling.value) {
+          // Calcular duración hasta el final del rango
+          const duration = calculateDurationUntilEnd()
+          
+          // Crear identificador único para este periodo
+          const endTimeKey = `${duration.totalMinutes}_${Date.now()}`
+          
+          // Solo enviar comando si no lo hemos enviado ya para este periodo
+          if (lastCalculatedEnd.value !== endTimeKey) {
+            console.log(`🔴 Ejecutando apagado programado por ${duration.hours}h ${duration.minutes}m...`)
+            
+            await api.toggleLoad(duration.hours, duration.minutes, 0)
+            
+            isActivelyControlling.value = true
+            lastActionTime.value = new Date().toISOString()
+            lastCalculatedEnd.value = endTimeKey
+            saveToStorage()
+            
+            console.log(`✅ Carga apagada hasta las ${endTime.value}`)
+          }
         }
       } else {
-        // Deberíamos estar encendidos
-        if (!isLoadOn && isActivelyControlling.value) {
-          console.log('🟢 Reactivando carga después de apagado programado...')
-          await api.toggleLoad(0, 0, 1) // Reactivar
+        // Estamos fuera del rango programado
+        if (isActivelyControlling.value) {
+          // El apagado programado debería haber terminado automáticamente
+          console.log('🟢 Fin del apagado programado - La carga debería reactivarse automáticamente')
           isActivelyControlling.value = false
           lastActionTime.value = new Date().toISOString()
+          lastCalculatedEnd.value = null
           saveToStorage()
         }
       }
@@ -181,6 +227,11 @@ export function useScheduledOff() {
     if (typeof end === 'string' && end.includes(':')) {
       endTime.value = end
     }
+    
+    // Reset control state cuando cambia el horario
+    isActivelyControlling.value = false
+    lastCalculatedEnd.value = null
+    
     saveToStorage()
   }
 
@@ -190,6 +241,7 @@ export function useScheduledOff() {
       cancelled.value = false
     } else {
       isActivelyControlling.value = false
+      lastCalculatedEnd.value = null
     }
     saveToStorage()
   }
@@ -197,11 +249,13 @@ export function useScheduledOff() {
   function cancelSchedule() {
     cancelled.value = true
     isActivelyControlling.value = false
+    lastCalculatedEnd.value = null
     saveToStorage()
   }
 
   function reactivateSchedule() {
     cancelled.value = false
+    lastCalculatedEnd.value = null
     saveToStorage()
   }
 
@@ -221,8 +275,12 @@ export function useScheduledOff() {
       localStorage.setItem(STORAGE_KEYS.endTime, endTime.value)
       localStorage.setItem(STORAGE_KEYS.cancelled, cancelled.value.toString())
       localStorage.setItem(STORAGE_KEYS.isActivelyControlling, isActivelyControlling.value.toString())
+      
       if (lastActionTime.value) {
         localStorage.setItem(STORAGE_KEYS.lastActionTime, lastActionTime.value)
+      }
+      if (lastCalculatedEnd.value) {
+        localStorage.setItem(STORAGE_KEYS.lastCalculatedEnd, lastCalculatedEnd.value)
       }
     } catch (error) {
       console.error('Error saving to localStorage:', error)
@@ -251,6 +309,11 @@ export function useScheduledOff() {
         lastActionTime.value = storedLastAction
       }
       
+      const storedLastEnd = localStorage.getItem(STORAGE_KEYS.lastCalculatedEnd)
+      if (storedLastEnd) {
+        lastCalculatedEnd.value = storedLastEnd
+      }
+      
       isInitialized.value = true
     } catch (error) {
       console.error('Error loading from localStorage:', error)
@@ -260,6 +323,7 @@ export function useScheduledOff() {
       endTime.value = '06:00'
       cancelled.value = false
       isActivelyControlling.value = false
+      lastCalculatedEnd.value = null
       isInitialized.value = true
     }
   }
