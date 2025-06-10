@@ -98,7 +98,7 @@
           </div>
         </div>
 
-        <!-- NEW: Scheduled Off Control -->
+        <!-- Scheduled Off Control -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Apagado Programado</h3>
           
@@ -407,13 +407,24 @@ function formatTime(seconds) {
   return `${h}h ${m}m ${s}s`
 }
 
+// Función corregida para formatear tiempo
 function formatDisplayTime(timeString) {
-  const [hours, minutes] = timeString.split(':')
-  const hour = parseInt(hours)
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+  // Validar que timeString sea una cadena válida
+  if (!timeString || typeof timeString !== 'string' || !timeString.includes(':')) {
+    return '--:-- --'
+  }
   
-  return `${displayHour}:${minutes} ${ampm}`
+  try {
+    const [hours, minutes] = timeString.split(':')
+    const hour = parseInt(hours)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+    
+    return `${displayHour}:${minutes} ${ampm}`
+  } catch (error) {
+    console.error('Error formatting time:', error)
+    return '--:-- --'
+  }
 }
 
 // Lifecycle
