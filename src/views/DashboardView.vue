@@ -100,6 +100,21 @@
           <p class="text-sm text-gray-600">PWM</p>
           <p class="text-xl font-semibold">{{ data.currentPWM }}/255</p>
         </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <p class="text-sm text-gray-600">Corriente umbral (Depende de % capacidad bateria) en Absorcion(si se esta por debajo pasa a Float) </p>
+          <p class="text-xl font-semibold">{{ data.absorptionCurrentThreshold_mA }} mA</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <p class="text-sm text-gray-600">Factor divisor para tomar el umbral absorcion y calcular el umbral Float </p>
+          <p class="text-xl font-semibold">{{ data.factorDivider }} </p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-4">
+          <p class="text-sm text-gray-600">Corriente Máxima permitida en Float</p>
+          <p class="text-xl font-semibold">{{ data.currentLimitIntoFloatStage }} mA</p>
+        </div>
         
         <div class="bg-white rounded-lg shadow p-4">
           <p class="text-sm text-gray-600">Ah Acumulados</p>
