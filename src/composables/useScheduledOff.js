@@ -140,34 +140,44 @@ export function useScheduledOff() {
   })
 
   const statusText = computed(() => {
-    if (!isInitialized.value) return 'Inicializando...'
-    if (!enabled.value) return 'Apagado programado deshabilitado'
+    if (!isInitialized.value) return 'Inicializando programación...'
+    if (!enabled.value) return 'Apagado automático deshabilitado'
     if (cancelled.value) return 'Programación cancelada por acción manual'
     
     const timeInfo = timeUntilNextChange.value
-    if (!timeInfo) return 'Calculando...'
+    if (!timeInfo) return 'Calculando programación...'
 
     if (isInScheduledRange.value) {
       if (isActivelyControlling.value) {
-        return `🔴 Apagado programado ACTIVO - Reactivación en ${timeInfo.hours}h ${timeInfo.minutes}m`
+        return `🔴 APAGADO AUTOMÁTICO ACTIVO - Reactivación automática en ${timeInfo.hours}h ${timeInfo.minutes}m`
       } else {
-        return `⚠️ En rango programado pero no controlando - Reactivación en ${timeInfo.hours}h ${timeInfo.minutes}m`
+        return `⚠️ En horario programado pero no controlando - Verificando estado...`
       }
     } else {
-      return `⏰ Próximo apagado programado en ${timeInfo.hours}h ${timeInfo.minutes}m`
+      return `⏰ Próximo apagado automático en ${timeInfo.hours}h ${timeInfo.minutes}m (${startTime.value} - ${endTime.value})`
     }
   })
 
   const statusClass = computed(() => {
     if (!isInitialized.value || !enabled.value || cancelled.value) return 'text-gray-600'
-    if (isInScheduledRange.value && isActivelyControlling.value) return 'text-red-600'
+    if (isInScheduledRange.value && isActivelyControlling.value) return 'text-red-600 font-semibold'
     if (isInScheduledRange.value) return 'text-orange-600'
     return 'text-blue-600'
   })
 
-  // Función para enviar comando con reintentos
+  // Función para enviar comando con reintentos y validación mejorada
   async function sendCommandWithRetry(hours, minutes, seconds, maxRetries = 3) {
     let lastError = null
+    
+    // Validación de entrada
+    if (hours < 0 || minutes < 0 || seconds < 0) {
+      throw new Error('Los valores de tiempo no pueden ser negativos')
+    }
+    
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds
+    if (totalSeconds > 43200) { // Máximo 12 horas
+      throw new Error('El tiempo máximo permitido es 12 horas')
+    }
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -175,6 +185,7 @@ export function useScheduledOff() {
           hours,
           minutes,
           seconds,
+          totalSeconds,
           timestamp: new Date().toISOString()
         })
         
@@ -247,6 +258,12 @@ export function useScheduledOff() {
         if (isLoadOn && !hasTemporaryOff && !isActivelyControlling.value) {
           // Calcular duración hasta el final del rango
           const duration = calculateDurationUntilEnd()
+          
+          // Validar que la duración sea válida
+          if (duration.totalMinutes <= 0 || duration.totalMinutes > 720) { // Máximo 12 horas
+            console.warn(`⚠️ [SCHEDULED OFF] Duración inválida calculada: ${duration.totalMinutes} minutos`)
+            return
+          }
           
           // Crear identificador único para este periodo
           const endTimeKey = `${duration.totalMinutes}_${Math.floor(Date.now() / 60000)}`
@@ -356,6 +373,13 @@ export function useScheduledOff() {
     }
     
     saveToStorage()
+    
+    // Forzar verificación inmediata después de cambio de estado
+    setTimeout(() => {
+      if (enabled.value) {
+        checkAndControlLoad()
+      }
+    }, 1000)
   }
 
   function cancelSchedule() {
@@ -372,6 +396,12 @@ export function useScheduledOff() {
     cancelled.value = false
     lastCalculatedEnd.value = null
     saveToStorage()
+    
+    // Verificar inmediatamente si debemos aplicar programación
+    setTimeout(() => {
+      checkAndControlLoad()
+    }, 500)
+    
     console.log(`✅ [SCHEDULED OFF] Programación reactivada`)
   }
 
@@ -383,7 +413,7 @@ export function useScheduledOff() {
     }
   }
 
-  // Persistencia
+  // Persistencia mejorada
   function saveToStorage() {
     try {
       const dataToSave = {
@@ -398,18 +428,14 @@ export function useScheduledOff() {
       
       console.log(`💾 [SCHEDULED OFF] Guardando en localStorage:`, dataToSave)
       
-      localStorage.setItem(STORAGE_KEYS.enabled, enabled.value.toString())
-      localStorage.setItem(STORAGE_KEYS.startTime, startTime.value)
-      localStorage.setItem(STORAGE_KEYS.endTime, endTime.value)
-      localStorage.setItem(STORAGE_KEYS.cancelled, cancelled.value.toString())
-      localStorage.setItem(STORAGE_KEYS.isActivelyControlling, isActivelyControlling.value.toString())
-      
-      if (lastActionTime.value) {
-        localStorage.setItem(STORAGE_KEYS.lastActionTime, lastActionTime.value)
-      }
-      if (lastCalculatedEnd.value) {
-        localStorage.setItem(STORAGE_KEYS.lastCalculatedEnd, lastCalculatedEnd.value)
-      }
+      Object.keys(STORAGE_KEYS).forEach(key => {
+        const value = dataToSave[key]
+        if (value !== null && value !== undefined) {
+          localStorage.setItem(STORAGE_KEYS[key], String(value))
+        } else {
+          localStorage.removeItem(STORAGE_KEYS[key])
+        }
+      })
       
       console.log(`✅ [SCHEDULED OFF] Datos guardados exitosamente`)
     } catch (error) {
@@ -433,16 +459,15 @@ export function useScheduledOff() {
       
       console.log(`📋 [SCHEDULED OFF] Datos encontrados en localStorage:`, loadedData)
       
+      // Cargar valores con validación
       enabled.value = loadedData.enabled === 'true'
       
-      const storedStartTime = loadedData.startTime
-      if (storedStartTime && storedStartTime.includes(':')) {
-        startTime.value = storedStartTime
+      if (loadedData.startTime && loadedData.startTime.includes(':')) {
+        startTime.value = loadedData.startTime
       }
       
-      const storedEndTime = loadedData.endTime
-      if (storedEndTime && storedEndTime.includes(':')) {
-        endTime.value = storedEndTime
+      if (loadedData.endTime && loadedData.endTime.includes(':')) {
+        endTime.value = loadedData.endTime
       }
       
       cancelled.value = loadedData.cancelled === 'true'
@@ -484,19 +509,31 @@ export function useScheduledOff() {
 
   // Lifecycle
   function startScheduler() {
+    console.log(`🚀 [SCHEDULED OFF] Iniciando programador automático...`)
+    
     loadFromStorage()
     
-    // Verificar cada minuto
-    checkInterval = setInterval(checkAndControlLoad, 60000)
+    // Verificar cada minuto (60 segundos)
+    checkInterval = setInterval(() => {
+      console.log(`⏰ [SCHEDULED OFF] Verificación automática programada`)
+      checkAndControlLoad()
+    }, 60000)
     
     // Actualizar tiempo cada segundo para UI
     timeUpdateInterval = setInterval(updateCurrentTime, 1000)
     
-    // Verificar inmediatamente después de un pequeño delay
-    setTimeout(checkAndControlLoad, 1000)
+    // Verificar inmediatamente después de un pequeño delay para permitir inicialización
+    setTimeout(() => {
+      console.log(`🔍 [SCHEDULED OFF] Verificación inicial`)
+      checkAndControlLoad()
+    }, 2000)
+    
+    console.log(`✅ [SCHEDULED OFF] Programador iniciado - Verificaciones cada 60 segundos`)
   }
 
   function stopScheduler() {
+    console.log(`🛑 [SCHEDULED OFF] Deteniendo programador automático...`)
+    
     if (checkInterval) {
       clearInterval(checkInterval)
       checkInterval = null
@@ -505,6 +542,8 @@ export function useScheduledOff() {
       clearInterval(timeUpdateInterval)
       timeUpdateInterval = null
     }
+    
+    console.log(`✅ [SCHEDULED OFF] Programador detenido`)
   }
 
   // Auto-iniciar en montaje
