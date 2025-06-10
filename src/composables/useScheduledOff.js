@@ -165,15 +165,82 @@ export function useScheduledOff() {
     return 'text-blue-600'
   })
 
+  // Función para enviar comando con reintentos
+  async function sendCommandWithRetry(hours, minutes, seconds, maxRetries = 3) {
+    let lastError = null
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 [SCHEDULED OFF] Intento ${attempt}/${maxRetries} - Enviando comando:`, {
+          hours,
+          minutes,
+          seconds,
+          timestamp: new Date().toISOString()
+        })
+        
+        const response = await api.toggleLoad(hours, minutes, seconds)
+        
+        console.log(`✅ [SCHEDULED OFF] Comando enviado exitosamente en intento ${attempt}:`, {
+          response,
+          timestamp: new Date().toISOString()
+        })
+        
+        return response // Éxito, salir del loop
+        
+      } catch (error) {
+        lastError = error
+        
+        console.error(`❌ [SCHEDULED OFF] Error en intento ${attempt}/${maxRetries}:`, {
+          error: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          timestamp: new Date().toISOString()
+        })
+        
+        if (attempt < maxRetries) {
+          const delay = attempt * 1000 // 1s, 2s, 3s
+          console.log(`⏱️ [SCHEDULED OFF] Esperando ${delay}ms antes del siguiente intento...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+    }
+    
+    // Si llegamos aquí, todos los intentos fallaron
+    console.error(`💥 [SCHEDULED OFF] FALLO TOTAL después de ${maxRetries} intentos:`, {
+      lastError: lastError.message,
+      timestamp: new Date().toISOString()
+    })
+    
+    throw lastError
+  }
+
   // Funciones principales
   async function checkAndControlLoad() {
-    if (!isInitialized.value || !enabled.value || cancelled.value) return
+    if (!isInitialized.value || !enabled.value || cancelled.value) {
+      console.log(`⏸️ [SCHEDULED OFF] Control deshabilitado:`, {
+        initialized: isInitialized.value,
+        enabled: enabled.value,
+        cancelled: cancelled.value
+      })
+      return
+    }
 
     try {
+      console.log(`🔍 [SCHEDULED OFF] Verificando estado de la carga...`)
+      
       // Obtener estado actual de la carga
       const status = await api.getActionsStatus()
       const isLoadOn = status.load_control_state
       const hasTemporaryOff = status.temporary_load_off
+
+      console.log(`📊 [SCHEDULED OFF] Estado actual:`, {
+        isLoadOn,
+        hasTemporaryOff,
+        isActivelyControlling: isActivelyControlling.value,
+        isInScheduledRange: isInScheduledRange.value,
+        currentTime: new Date().toLocaleTimeString(),
+        scheduleRange: `${startTime.value} - ${endTime.value}`
+      })
 
       if (isInScheduledRange.value) {
         // Estamos en rango programado - deberíamos estar apagados
@@ -182,27 +249,46 @@ export function useScheduledOff() {
           const duration = calculateDurationUntilEnd()
           
           // Crear identificador único para este periodo
-          const endTimeKey = `${duration.totalMinutes}_${Date.now()}`
+          const endTimeKey = `${duration.totalMinutes}_${Math.floor(Date.now() / 60000)}`
           
           // Solo enviar comando si no lo hemos enviado ya para este periodo
           if (lastCalculatedEnd.value !== endTimeKey) {
-            console.log(`🔴 Ejecutando apagado programado por ${duration.hours}h ${duration.minutes}m...`)
+            console.log(`🔴 [SCHEDULED OFF] INICIANDO apagado programado:`, {
+              duration: `${duration.hours}h ${duration.minutes}m`,
+              totalMinutes: duration.totalMinutes,
+              endTime: endTime.value,
+              endTimeKey
+            })
             
-            await api.toggleLoad(duration.hours, duration.minutes, 0)
-            
-            isActivelyControlling.value = true
-            lastActionTime.value = new Date().toISOString()
-            lastCalculatedEnd.value = endTimeKey
-            saveToStorage()
-            
-            console.log(`✅ Carga apagada hasta las ${endTime.value}`)
+            try {
+              await sendCommandWithRetry(duration.hours, duration.minutes, 0)
+              
+              isActivelyControlling.value = true
+              lastActionTime.value = new Date().toISOString()
+              lastCalculatedEnd.value = endTimeKey
+              saveToStorage()
+              
+              console.log(`✅ [SCHEDULED OFF] Apagado programado ACTIVADO exitosamente hasta las ${endTime.value}`)
+              
+            } catch (error) {
+              console.error(`💥 [SCHEDULED OFF] FALLO CRÍTICO al enviar comando de apagado:`, error)
+              // No cambiar el estado si falló el comando
+            }
+          } else {
+            console.log(`⏭️ [SCHEDULED OFF] Comando ya enviado para este periodo: ${endTimeKey}`)
           }
+        } else {
+          console.log(`ℹ️ [SCHEDULED OFF] En rango pero no se requiere acción:`, {
+            reason: !isLoadOn ? 'Carga ya apagada' : 
+                   hasTemporaryOff ? 'Apagado temporal activo' : 
+                   'Ya controlando activamente'
+          })
         }
       } else {
         // Estamos fuera del rango programado
         if (isActivelyControlling.value) {
           // El apagado programado debería haber terminado automáticamente
-          console.log('🟢 Fin del apagado programado - La carga debería reactivarse automáticamente')
+          console.log(`🟢 [SCHEDULED OFF] FIN del apagado programado - Carga reactivada automáticamente`)
           isActivelyControlling.value = false
           lastActionTime.value = new Date().toISOString()
           lastCalculatedEnd.value = null
@@ -210,7 +296,11 @@ export function useScheduledOff() {
         }
       }
     } catch (error) {
-      console.error('Error en control programado:', error)
+      console.error(`❌ [SCHEDULED OFF] Error en checkAndControlLoad:`, {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      })
     }
   }
 
@@ -220,6 +310,13 @@ export function useScheduledOff() {
 
   // Configuración
   function setSchedule(start, end) {
+    console.log(`⏰ [SCHEDULED OFF] Actualizando horario:`, {
+      previousStart: startTime.value,
+      previousEnd: endTime.value,
+      newStart: start,
+      newEnd: end
+    })
+    
     // Validar que los parámetros sean cadenas válidas
     if (typeof start === 'string' && start.includes(':')) {
       startTime.value = start
@@ -232,37 +329,56 @@ export function useScheduledOff() {
     isActivelyControlling.value = false
     lastCalculatedEnd.value = null
     
+    console.log(`✅ [SCHEDULED OFF] Horario actualizado: ${startTime.value} - ${endTime.value}`)
+    
     saveToStorage()
   }
 
   function toggleEnabled() {
+    const previousState = enabled.value
     enabled.value = !enabled.value
+    
+    console.log(`🔄 [SCHEDULED OFF] Toggle habilitado:`, {
+      previousState,
+      newState: enabled.value,
+      timestamp: new Date().toISOString()
+    })
+    
     if (enabled.value) {
+      // Al habilitar, limpiar cancelación
       cancelled.value = false
+      console.log(`✅ [SCHEDULED OFF] Programación HABILITADA`)
     } else {
+      // Al deshabilitar, limpiar estado de control
       isActivelyControlling.value = false
       lastCalculatedEnd.value = null
+      console.log(`🔴 [SCHEDULED OFF] Programación DESHABILITADA`)
     }
+    
     saveToStorage()
   }
 
   function cancelSchedule() {
+    console.log(`❌ [SCHEDULED OFF] Cancelando programación`)
     cancelled.value = true
     isActivelyControlling.value = false
     lastCalculatedEnd.value = null
     saveToStorage()
+    console.log(`✅ [SCHEDULED OFF] Programación cancelada`)
   }
 
   function reactivateSchedule() {
+    console.log(`🔄 [SCHEDULED OFF] Reactivando programación`)
     cancelled.value = false
     lastCalculatedEnd.value = null
     saveToStorage()
+    console.log(`✅ [SCHEDULED OFF] Programación reactivada`)
   }
 
   // Override manual - llamar cuando se hace una acción manual
   function handleManualOverride() {
     if (enabled.value && isInScheduledRange.value && isActivelyControlling.value) {
-      console.log('🔧 Acción manual detectada - Cancelando programación')
+      console.log(`🔧 [SCHEDULED OFF] Acción manual detectada - Cancelando programación automática`)
       cancelSchedule()
     }
   }
@@ -270,6 +386,18 @@ export function useScheduledOff() {
   // Persistencia
   function saveToStorage() {
     try {
+      const dataToSave = {
+        enabled: enabled.value,
+        startTime: startTime.value,
+        endTime: endTime.value,
+        cancelled: cancelled.value,
+        isActivelyControlling: isActivelyControlling.value,
+        lastActionTime: lastActionTime.value,
+        lastCalculatedEnd: lastCalculatedEnd.value
+      }
+      
+      console.log(`💾 [SCHEDULED OFF] Guardando en localStorage:`, dataToSave)
+      
       localStorage.setItem(STORAGE_KEYS.enabled, enabled.value.toString())
       localStorage.setItem(STORAGE_KEYS.startTime, startTime.value)
       localStorage.setItem(STORAGE_KEYS.endTime, endTime.value)
@@ -282,41 +410,65 @@ export function useScheduledOff() {
       if (lastCalculatedEnd.value) {
         localStorage.setItem(STORAGE_KEYS.lastCalculatedEnd, lastCalculatedEnd.value)
       }
+      
+      console.log(`✅ [SCHEDULED OFF] Datos guardados exitosamente`)
     } catch (error) {
-      console.error('Error saving to localStorage:', error)
+      console.error('❌ [SCHEDULED OFF] Error saving to localStorage:', error)
     }
   }
 
   function loadFromStorage() {
     try {
-      enabled.value = localStorage.getItem(STORAGE_KEYS.enabled) === 'true'
+      console.log(`📖 [SCHEDULED OFF] Cargando configuración desde localStorage...`)
       
-      const storedStartTime = localStorage.getItem(STORAGE_KEYS.startTime)
+      const loadedData = {
+        enabled: localStorage.getItem(STORAGE_KEYS.enabled),
+        startTime: localStorage.getItem(STORAGE_KEYS.startTime),
+        endTime: localStorage.getItem(STORAGE_KEYS.endTime),
+        cancelled: localStorage.getItem(STORAGE_KEYS.cancelled),
+        isActivelyControlling: localStorage.getItem(STORAGE_KEYS.isActivelyControlling),
+        lastActionTime: localStorage.getItem(STORAGE_KEYS.lastActionTime),
+        lastCalculatedEnd: localStorage.getItem(STORAGE_KEYS.lastCalculatedEnd)
+      }
+      
+      console.log(`📋 [SCHEDULED OFF] Datos encontrados en localStorage:`, loadedData)
+      
+      enabled.value = loadedData.enabled === 'true'
+      
+      const storedStartTime = loadedData.startTime
       if (storedStartTime && storedStartTime.includes(':')) {
         startTime.value = storedStartTime
       }
       
-      const storedEndTime = localStorage.getItem(STORAGE_KEYS.endTime)
+      const storedEndTime = loadedData.endTime
       if (storedEndTime && storedEndTime.includes(':')) {
         endTime.value = storedEndTime
       }
       
-      cancelled.value = localStorage.getItem(STORAGE_KEYS.cancelled) === 'true'
-      isActivelyControlling.value = localStorage.getItem(STORAGE_KEYS.isActivelyControlling) === 'true'
+      cancelled.value = loadedData.cancelled === 'true'
+      isActivelyControlling.value = loadedData.isActivelyControlling === 'true'
       
-      const storedLastAction = localStorage.getItem(STORAGE_KEYS.lastActionTime)
-      if (storedLastAction) {
-        lastActionTime.value = storedLastAction
+      if (loadedData.lastActionTime) {
+        lastActionTime.value = loadedData.lastActionTime
       }
       
-      const storedLastEnd = localStorage.getItem(STORAGE_KEYS.lastCalculatedEnd)
-      if (storedLastEnd) {
-        lastCalculatedEnd.value = storedLastEnd
+      if (loadedData.lastCalculatedEnd) {
+        lastCalculatedEnd.value = loadedData.lastCalculatedEnd
       }
+      
+      const finalState = {
+        enabled: enabled.value,
+        startTime: startTime.value,
+        endTime: endTime.value,
+        cancelled: cancelled.value,
+        isActivelyControlling: isActivelyControlling.value
+      }
+      
+      console.log(`✅ [SCHEDULED OFF] Configuración cargada:`, finalState)
       
       isInitialized.value = true
     } catch (error) {
-      console.error('Error loading from localStorage:', error)
+      console.error('❌ [SCHEDULED OFF] Error loading from localStorage:', error)
       // Establecer valores por defecto seguros
       enabled.value = false
       startTime.value = '00:00'
@@ -325,6 +477,8 @@ export function useScheduledOff() {
       isActivelyControlling.value = false
       lastCalculatedEnd.value = null
       isInitialized.value = true
+      
+      console.log(`🔄 [SCHEDULED OFF] Usando valores por defecto`)
     }
   }
 
