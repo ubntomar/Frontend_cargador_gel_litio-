@@ -2,13 +2,12 @@
   <div>
     <h2 class="text-2xl font-bold text-gray-900 mb-6">Control de Carga</h2>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Load Control -->
+    <div class="space-y-6">
+      <!-- Current Status -->
       <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Control de Carga</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Estado Actual</h3>
         
-        <!-- Current Status -->
-        <div class="mb-6 p-4 rounded-lg" :class="statusBgClass">
+        <div class="mb-4 p-4 rounded-lg" :class="statusBgClass">
           <div class="flex items-center justify-between">
             <div>
               <p class="font-semibold" :class="statusTextClass">
@@ -25,62 +24,152 @@
           </div>
         </div>
 
-        <!-- Toggle Load Off -->
-        <div class="space-y-4">
-          <h4 class="font-medium text-gray-700">Apagar Temporalmente</h4>
+        <!-- Scheduled Off Status -->
+        <div v-if="scheduledOff.enabled && !scheduledOff.cancelled" class="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+          <p :class="scheduledOff.statusClass" class="text-sm font-medium">
+            {{ scheduledOff.statusText }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Grid de controles -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Manual Load Control -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Control Manual</h3>
           
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Horas</label>
-              <input
-                v-model.number="hours"
-                type="number"
-                min="0"
-                max="12"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              />
-            </div>
+          <div class="space-y-4">
+            <h4 class="font-medium text-gray-700">Apagar Temporalmente</h4>
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Minutos</label>
-              <input
-                v-model.number="minutes"
-                type="number"
-                min="0"
-                max="59"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              />
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Horas</label>
+                <input
+                  v-model.number="hours"
+                  type="number"
+                  min="0"
+                  max="12"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Minutos</label>
+                <input
+                  v-model.number="minutes"
+                  type="number"
+                  min="0"
+                  max="59"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Segundos</label>
+                <input
+                  v-model.number="seconds"
+                  type="number"
+                  min="0"
+                  max="59"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
             </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Segundos</label>
-              <input
-                v-model.number="seconds"
-                type="number"
-                min="0"
-                max="59"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              />
+
+            <div class="flex space-x-3">
+              <button
+                @click="toggleLoad"
+                :disabled="loading || !isValidDuration"
+                class="flex-1 bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {{ loading ? 'Enviando...' : 'Apagar Carga' }}
+              </button>
+              
+              <button
+                v-if="actionsStatus?.temporary_load_off"
+                @click="cancelOff"
+                :disabled="loading"
+                class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {{ loading ? 'Reactivando...' : 'Reactivar Carga' }}
+              </button>
             </div>
           </div>
+        </div>
 
-          <div class="flex space-x-3">
-            <button
-              @click="toggleLoad"
-              :disabled="loading || !isValidDuration"
-              class="flex-1 bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {{ loading ? 'Enviando...' : 'Apagar Carga' }}
-            </button>
-            
-            <button
-              v-if="actionsStatus?.temporary_load_off"
-              @click="cancelOff"
-              :disabled="loading"
-              class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {{ loading ? 'Reactivando...' : 'Reactivar Carga' }}
-            </button>
+        <!-- NEW: Scheduled Off Control -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Apagado Programado</h3>
+          
+          <div class="space-y-4">
+            <!-- Enable/Disable Toggle -->
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-gray-700">Habilitar apagado programado</span>
+              <button
+                @click="scheduledOff.toggleEnabled"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                :class="scheduledOff.enabled ? 'bg-blue-600' : 'bg-gray-200'"
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  :class="scheduledOff.enabled ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
+            </div>
+
+            <!-- Time Configuration -->
+            <div v-if="scheduledOff.enabled" class="space-y-4 pt-4 border-t">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Hora de inicio</label>
+                  <input
+                    v-model="scheduledOff.startTime"
+                    type="time"
+                    @change="updateSchedule"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Hora de fin</label>
+                  <input
+                    v-model="scheduledOff.endTime"
+                    type="time"
+                    @change="updateSchedule"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+
+              <!-- Schedule Info -->
+              <div class="p-3 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-600">
+                  La carga se apagará automáticamente todos los días de 
+                  <span class="font-semibold">{{ formatDisplayTime(scheduledOff.startTime) }}</span> a 
+                  <span class="font-semibold">{{ formatDisplayTime(scheduledOff.endTime) }}</span>
+                </p>
+              </div>
+
+              <!-- Cancel/Reactivate buttons -->
+              <div v-if="scheduledOff.cancelled" class="flex space-x-3">
+                <button
+                  @click="scheduledOff.reactivateSchedule"
+                  class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                >
+                  Reactivar Programación
+                </button>
+              </div>
+              
+              <div v-else-if="scheduledOff.enabled" class="flex space-x-3">
+                <button
+                  @click="scheduledOff.cancelSchedule"
+                  class="flex-1 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
+                >
+                  Cancelar Programación
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -89,10 +178,10 @@
       <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
         
-        <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <button
             @click="quickAction(0, 5, 0)"
-            class="w-full text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            class="text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
           >
             <p class="font-medium">Apagar 5 minutos</p>
             <p class="text-sm text-gray-600">Apagado corto para mantenimiento</p>
@@ -100,7 +189,7 @@
           
           <button
             @click="quickAction(0, 30, 0)"
-            class="w-full text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            class="text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
           >
             <p class="font-medium">Apagar 30 minutos</p>
             <p class="text-sm text-gray-600">Media hora sin carga</p>
@@ -108,7 +197,7 @@
           
           <button
             @click="quickAction(1, 0, 0)"
-            class="w-full text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            class="text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
           >
             <p class="font-medium">Apagar 1 hora</p>
             <p class="text-sm text-gray-600">Apagado extendido</p>
@@ -116,20 +205,30 @@
           
           <button
             @click="quickAction(2, 0, 0)"
-            class="w-full text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            class="text-left px-4 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
           >
             <p class="font-medium">Apagar 2 horas</p>
             <p class="text-sm text-gray-600">Apagado prolongado</p>
           </button>
 
-          <!-- Nueva acción rápida para reactivar -->
+          <!-- Reactivate button -->
           <button
-            v-if="actionsStatus?.temporary_load_off"
+            v-if="actionsStatus?.temporary_load_off || (scheduledOff.enabled && scheduledOff.isInScheduledRange)"
             @click="quickReactivate"
-            class="w-full text-left px-4 py-3 rounded-lg border-2 border-green-300 bg-green-50 hover:bg-green-100 transition-colors"
+            class="text-left px-4 py-3 rounded-lg border-2 border-green-300 bg-green-50 hover:bg-green-100 transition-colors"
           >
             <p class="font-medium text-green-800">🔌 Reactivar Carga</p>
             <p class="text-sm text-green-600">Conectar carga inmediatamente</p>
+          </button>
+
+          <!-- Override scheduled button -->
+          <button
+            v-if="scheduledOff.enabled && scheduledOff.isInScheduledRange && !scheduledOff.cancelled"
+            @click="overrideScheduled"
+            class="text-left px-4 py-3 rounded-lg border-2 border-yellow-300 bg-yellow-50 hover:bg-yellow-100 transition-colors"
+          >
+            <p class="font-medium text-yellow-800">⚡ Override Programado</p>
+            <p class="text-sm text-yellow-600">Anular apagado programado</p>
           </button>
         </div>
       </div>
@@ -137,7 +236,7 @@
 
     <!-- Messages -->
     <transition name="fade">
-      <div v-if="message" class="fixed bottom-4 right-4 px-4 py-3 rounded shadow-lg" :class="messageClass">
+      <div v-if="message" class="fixed bottom-4 right-4 px-4 py-3 rounded shadow-lg z-50" :class="messageClass">
         <p>{{ message }}</p>
       </div>
     </transition>
@@ -147,6 +246,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/services/api'
+import { useScheduledOff } from '@/composables/useScheduledOff'
 
 // Estado local
 const hours = ref(0)
@@ -156,6 +256,9 @@ const loading = ref(false)
 const message = ref('')
 const messageType = ref('success')
 const actionsStatus = ref(null)
+
+// Scheduled Off composable
+const scheduledOff = useScheduledOff()
 
 let statusInterval = null
 
@@ -212,6 +315,9 @@ async function toggleLoad() {
     showMessage('Carga apagada correctamente', 'success')
     await loadStatus()
     
+    // Notificar al scheduled off sobre acción manual
+    scheduledOff.handleManualOverride()
+    
     // Resetear inputs
     hours.value = 0
     minutes.value = 0
@@ -223,15 +329,16 @@ async function toggleLoad() {
   }
 }
 
-// MÉTODO ACTUALIZADO: Ahora usa toggleLoad(0, 0, 1) en lugar de cancelTemporaryOff()
 async function cancelOff() {
   loading.value = true
   
   try {
-    // Estrategia nueva: enviar toggle_load con 1 segundo para reactivar inmediatamente
     await api.toggleLoad(0, 0, 1)
     showMessage('Carga reactivada correctamente', 'success')
     await loadStatus()
+    
+    // Notificar al scheduled off sobre acción manual
+    scheduledOff.handleManualOverride()
   } catch (error) {
     showMessage(error.response?.data?.detail || 'Error al reactivar carga', 'error')
   } finally {
@@ -246,7 +353,6 @@ function quickAction(h, m, s) {
   toggleLoad()
 }
 
-// Nueva función para reactivación rápida
 async function quickReactivate() {
   loading.value = true
   
@@ -254,11 +360,34 @@ async function quickReactivate() {
     await api.toggleLoad(0, 0, 1)
     showMessage('¡Carga reactivada inmediatamente!', 'success')
     await loadStatus()
+    
+    // Notificar al scheduled off sobre acción manual
+    scheduledOff.handleManualOverride()
   } catch (error) {
     showMessage(error.response?.data?.detail || 'Error al reactivar', 'error')
   } finally {
     loading.value = false
   }
+}
+
+async function overrideScheduled() {
+  loading.value = true
+  
+  try {
+    await api.toggleLoad(0, 0, 1)
+    scheduledOff.handleManualOverride()
+    showMessage('Apagado programado anulado y carga reactivada', 'success')
+    await loadStatus()
+  } catch (error) {
+    showMessage(error.response?.data?.detail || 'Error al anular programación', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+function updateSchedule() {
+  scheduledOff.setSchedule(scheduledOff.startTime, scheduledOff.endTime)
+  showMessage('Horario programado actualizado', 'success')
 }
 
 function showMessage(msg, type = 'success') {
@@ -278,11 +407,20 @@ function formatTime(seconds) {
   return `${h}h ${m}m ${s}s`
 }
 
+function formatDisplayTime(timeString) {
+  const [hours, minutes] = timeString.split(':')
+  const hour = parseInt(hours)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+  
+  return `${displayHour}:${minutes} ${ampm}`
+}
+
 // Lifecycle
 onMounted(() => {
   loadStatus()
   
-  //... Actualizar estado cada 9 segundos
+  // Actualizar estado cada 9 segundos
   statusInterval = setInterval(loadStatus, 9000)
 })
 
