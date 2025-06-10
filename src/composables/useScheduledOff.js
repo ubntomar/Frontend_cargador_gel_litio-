@@ -2,7 +2,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/services/api'
 
 export function useScheduledOff() {
-  // Estado reactivo
+  // Estado reactivo con valores por defecto seguros
   const enabled = ref(false)
   const startTime = ref('00:00')
   const endTime = ref('06:00')
@@ -10,6 +10,7 @@ export function useScheduledOff() {
   const currentTime = ref(new Date())
   const isActivelyControlling = ref(false)
   const lastActionTime = ref(null)
+  const isInitialized = ref(false)
 
   // Timer para verificar cada minuto
   let checkInterval = null
@@ -27,7 +28,7 @@ export function useScheduledOff() {
 
   // Computed properties
   const isInScheduledRange = computed(() => {
-    if (!enabled.value || cancelled.value) return false
+    if (!isInitialized.value || !enabled.value || cancelled.value) return false
 
     const now = new Date()
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
@@ -47,7 +48,7 @@ export function useScheduledOff() {
   })
 
   const timeUntilNextChange = computed(() => {
-    if (!enabled.value || cancelled.value) return null
+    if (!isInitialized.value || !enabled.value || cancelled.value) return null
 
     const now = new Date()
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
@@ -108,6 +109,7 @@ export function useScheduledOff() {
   })
 
   const statusText = computed(() => {
+    if (!isInitialized.value) return 'Inicializando...'
     if (!enabled.value) return 'Apagado programado deshabilitado'
     if (cancelled.value) return 'Programación cancelada por acción manual'
     
@@ -126,7 +128,7 @@ export function useScheduledOff() {
   })
 
   const statusClass = computed(() => {
-    if (!enabled.value || cancelled.value) return 'text-gray-600'
+    if (!isInitialized.value || !enabled.value || cancelled.value) return 'text-gray-600'
     if (isInScheduledRange.value && isActivelyControlling.value) return 'text-red-600'
     if (isInScheduledRange.value) return 'text-orange-600'
     return 'text-blue-600'
@@ -134,7 +136,7 @@ export function useScheduledOff() {
 
   // Funciones principales
   async function checkAndControlLoad() {
-    if (!enabled.value || cancelled.value) return
+    if (!isInitialized.value || !enabled.value || cancelled.value) return
 
     try {
       // Obtener estado actual de la carga
@@ -172,8 +174,13 @@ export function useScheduledOff() {
 
   // Configuración
   function setSchedule(start, end) {
-    startTime.value = start
-    endTime.value = end
+    // Validar que los parámetros sean cadenas válidas
+    if (typeof start === 'string' && start.includes(':')) {
+      startTime.value = start
+    }
+    if (typeof end === 'string' && end.includes(':')) {
+      endTime.value = end
+    }
     saveToStorage()
   }
 
@@ -208,26 +215,52 @@ export function useScheduledOff() {
 
   // Persistencia
   function saveToStorage() {
-    localStorage.setItem(STORAGE_KEYS.enabled, enabled.value.toString())
-    localStorage.setItem(STORAGE_KEYS.startTime, startTime.value)
-    localStorage.setItem(STORAGE_KEYS.endTime, endTime.value)
-    localStorage.setItem(STORAGE_KEYS.cancelled, cancelled.value.toString())
-    localStorage.setItem(STORAGE_KEYS.isActivelyControlling, isActivelyControlling.value.toString())
-    if (lastActionTime.value) {
-      localStorage.setItem(STORAGE_KEYS.lastActionTime, lastActionTime.value)
+    try {
+      localStorage.setItem(STORAGE_KEYS.enabled, enabled.value.toString())
+      localStorage.setItem(STORAGE_KEYS.startTime, startTime.value)
+      localStorage.setItem(STORAGE_KEYS.endTime, endTime.value)
+      localStorage.setItem(STORAGE_KEYS.cancelled, cancelled.value.toString())
+      localStorage.setItem(STORAGE_KEYS.isActivelyControlling, isActivelyControlling.value.toString())
+      if (lastActionTime.value) {
+        localStorage.setItem(STORAGE_KEYS.lastActionTime, lastActionTime.value)
+      }
+    } catch (error) {
+      console.error('Error saving to localStorage:', error)
     }
   }
 
   function loadFromStorage() {
-    enabled.value = localStorage.getItem(STORAGE_KEYS.enabled) === 'true'
-    startTime.value = localStorage.getItem(STORAGE_KEYS.startTime) || '00:00'
-    endTime.value = localStorage.getItem(STORAGE_KEYS.endTime) || '06:00'
-    cancelled.value = localStorage.getItem(STORAGE_KEYS.cancelled) === 'true'
-    isActivelyControlling.value = localStorage.getItem(STORAGE_KEYS.isActivelyControlling) === 'true'
-    
-    const storedLastAction = localStorage.getItem(STORAGE_KEYS.lastActionTime)
-    if (storedLastAction) {
-      lastActionTime.value = storedLastAction
+    try {
+      enabled.value = localStorage.getItem(STORAGE_KEYS.enabled) === 'true'
+      
+      const storedStartTime = localStorage.getItem(STORAGE_KEYS.startTime)
+      if (storedStartTime && storedStartTime.includes(':')) {
+        startTime.value = storedStartTime
+      }
+      
+      const storedEndTime = localStorage.getItem(STORAGE_KEYS.endTime)
+      if (storedEndTime && storedEndTime.includes(':')) {
+        endTime.value = storedEndTime
+      }
+      
+      cancelled.value = localStorage.getItem(STORAGE_KEYS.cancelled) === 'true'
+      isActivelyControlling.value = localStorage.getItem(STORAGE_KEYS.isActivelyControlling) === 'true'
+      
+      const storedLastAction = localStorage.getItem(STORAGE_KEYS.lastActionTime)
+      if (storedLastAction) {
+        lastActionTime.value = storedLastAction
+      }
+      
+      isInitialized.value = true
+    } catch (error) {
+      console.error('Error loading from localStorage:', error)
+      // Establecer valores por defecto seguros
+      enabled.value = false
+      startTime.value = '00:00'
+      endTime.value = '06:00'
+      cancelled.value = false
+      isActivelyControlling.value = false
+      isInitialized.value = true
     }
   }
 
@@ -241,8 +274,8 @@ export function useScheduledOff() {
     // Actualizar tiempo cada segundo para UI
     timeUpdateInterval = setInterval(updateCurrentTime, 1000)
     
-    // Verificar inmediatamente
-    checkAndControlLoad()
+    // Verificar inmediatamente después de un pequeño delay
+    setTimeout(checkAndControlLoad, 1000)
   }
 
   function stopScheduler() {
@@ -268,6 +301,7 @@ export function useScheduledOff() {
     cancelled,
     currentTime,
     isActivelyControlling,
+    isInitialized,
     
     // Computed
     isInScheduledRange,
