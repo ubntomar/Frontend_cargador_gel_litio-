@@ -60,10 +60,8 @@ export const api = {
     return response.data
   },
 
-  async cancelTemporaryOff() {
-    const response = await apiClient.post('/actions/cancel_temp_off')
-    return response.data
-  },
+  // MÉTODO ELIMINADO: cancelTemporaryOff() 
+  // Ahora se usa toggleLoad(0, 0, 1) para cancelar
 
   async getActionsStatus() {
     const response = await apiClient.get('/actions/status')

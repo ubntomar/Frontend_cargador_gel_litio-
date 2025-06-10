@@ -79,7 +79,7 @@
               :disabled="loading"
               class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {{ loading ? 'Cancelando...' : 'Cancelar Apagado' }}
+              {{ loading ? 'Reactivando...' : 'Reactivar Carga' }}
             </button>
           </div>
         </div>
@@ -120,6 +120,16 @@
           >
             <p class="font-medium">Apagar 2 horas</p>
             <p class="text-sm text-gray-600">Apagado prolongado</p>
+          </button>
+
+          <!-- Nueva acción rápida para reactivar -->
+          <button
+            v-if="actionsStatus?.temporary_load_off"
+            @click="quickReactivate"
+            class="w-full text-left px-4 py-3 rounded-lg border-2 border-green-300 bg-green-50 hover:bg-green-100 transition-colors"
+          >
+            <p class="font-medium text-green-800">🔌 Reactivar Carga</p>
+            <p class="text-sm text-green-600">Conectar carga inmediatamente</p>
           </button>
         </div>
       </div>
@@ -213,15 +223,17 @@ async function toggleLoad() {
   }
 }
 
+// MÉTODO ACTUALIZADO: Ahora usa toggleLoad(0, 0, 1) en lugar de cancelTemporaryOff()
 async function cancelOff() {
   loading.value = true
   
   try {
-    await api.cancelTemporaryOff()
-    showMessage('Apagado cancelado', 'success')
+    // Estrategia nueva: enviar toggle_load con 1 segundo para reactivar inmediatamente
+    await api.toggleLoad(0, 0, 1)
+    showMessage('Carga reactivada correctamente', 'success')
     await loadStatus()
   } catch (error) {
-    showMessage(error.response?.data?.detail || 'Error al cancelar', 'error')
+    showMessage(error.response?.data?.detail || 'Error al reactivar carga', 'error')
   } finally {
     loading.value = false
   }
@@ -232,6 +244,21 @@ function quickAction(h, m, s) {
   minutes.value = m
   seconds.value = s
   toggleLoad()
+}
+
+// Nueva función para reactivación rápida
+async function quickReactivate() {
+  loading.value = true
+  
+  try {
+    await api.toggleLoad(0, 0, 1)
+    showMessage('¡Carga reactivada inmediatamente!', 'success')
+    await loadStatus()
+  } catch (error) {
+    showMessage(error.response?.data?.detail || 'Error al reactivar', 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
 function showMessage(msg, type = 'success') {
@@ -255,8 +282,8 @@ function formatTime(seconds) {
 onMounted(() => {
   loadStatus()
   
-  // Actualizar estado cada 2 segundos
-  statusInterval = setInterval(loadStatus, 2000)
+  //... Actualizar estado cada 9 segundos
+  statusInterval = setInterval(loadStatus, 9000)
 })
 
 onUnmounted(() => {
@@ -265,3 +292,12 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+</style>
