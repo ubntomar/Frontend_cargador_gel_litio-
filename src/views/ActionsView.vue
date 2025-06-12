@@ -171,6 +171,122 @@
           </button>
         </div>
       </div>
+
+      <!-- Schedule Daily (Tareas Programadas) -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Apagado Programado Diario</h3>
+          
+          <!-- Enable/Disable Toggle -->
+          <button
+            @click="toggleSchedule"
+            :disabled="scheduleLoading"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+            :class="scheduleStatus?.enabled ? 'bg-blue-600' : 'bg-gray-200'"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+              :class="scheduleStatus?.enabled ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+
+        <!-- Schedule Status -->
+        <div v-if="scheduleStatus" class="space-y-4">
+          <!-- Current Status -->
+          <div v-if="scheduleStatus.enabled" class="p-3 rounded-lg" 
+               :class="scheduleStatus.currently_active ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50 border border-gray-200'">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-medium" :class="scheduleStatus.currently_active ? 'text-orange-800' : 'text-gray-800'">
+                  {{ scheduleStatus.currently_active ? '⏰ Apagado programado ACTIVO' : '📅 Programado para ejecutarse' }}
+                </p>
+                <p class="text-sm mt-1">
+                  <span v-if="scheduleStatus.currently_active">
+                    Terminará a las {{ scheduleStatus.end_time }}
+                  </span>
+                  <span v-else-if="scheduleStatus.next_execution">
+                    Próxima ejecución: {{ formatNextExecution(scheduleStatus.next_execution) }}
+                  </span>
+                </p>
+                <p v-if="scheduleStatus.manual_override_active" class="text-sm text-amber-600 mt-1">
+                  ⚠️ Override manual activo - El schedule está anulado hasta mañana
+                </p>
+              </div>
+              <div v-if="scheduleStatus.currently_active" class="text-right">
+                <p class="text-sm text-gray-600">Tiempo restante</p>
+                <p class="font-mono text-lg font-bold text-orange-700">{{ remainingScheduleTime }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Start Time -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Hora de Inicio</label>
+              <div class="flex space-x-2">
+                <select v-model="scheduleHour" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option v-for="h in 12" :key="h" :value="h">{{ String(h).padStart(2, '0') }}</option>
+                </select>
+                <span class="text-gray-500 self-center">:</span>
+                <select v-model="scheduleMinute" class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option v-for="m in 60" :key="m-1" :value="m-1">{{ String(m-1).padStart(2, '0') }}</option>
+                </select>
+                <select v-model="scheduleAmPm" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Duration -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Duración</label>
+              <div class="flex space-x-2">
+                <div class="flex-1">
+                  <select v-model="scheduleDurationHours" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    <option v-for="h in 9" :key="h-1" :value="h-1">{{ h-1 }}h</option>
+                  </select>
+                </div>
+                <div class="flex-1">
+                  <select v-model="scheduleDurationMinutes" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    <option v-for="m in 60" :key="m-1" :value="m-1">{{ m-1 }}m</option>
+                  </select>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Máximo 8 horas</p>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex space-x-3">
+            <button
+              @click="saveScheduleConfig"
+              :disabled="scheduleLoading"
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {{ scheduleLoading ? 'Guardando...' : 'Guardar Configuración' }}
+            </button>
+            
+            <button
+              v-if="scheduleStatus.manual_override_active"
+              @click="clearOverride"
+              :disabled="scheduleLoading"
+              class="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Limpiar Override
+            </button>
+          </div>
+
+          <!-- Help Text -->
+          <div class="text-xs text-gray-500 space-y-1 pt-2 border-t">
+            <p>• El apagado programado se ejecuta diariamente a la hora configurada</p>
+            <p>• Los comandos manuales anulan el schedule hasta el día siguiente</p>
+            <p>• La carga se reactivará automáticamente al finalizar el período programado</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Messages -->
@@ -202,7 +318,19 @@ const actionsStatus = ref(null)
 const showDebugInfo = ref(false)
 const lastStatusUpdate = ref('')
 
+// Schedule state
+const scheduleStatus = ref(null)
+const scheduleLoading = ref(false)
+const scheduleHour = ref(12)
+const scheduleMinute = ref(0)
+const scheduleAmPm = ref('AM')
+const scheduleDurationHours = ref(6)
+const scheduleDurationMinutes = ref(0)
+const remainingScheduleTime = ref('--:--:--')
+
 let statusInterval = null
+let scheduleInterval = null
+let scheduleCountdownInterval = null
 
 // Computed
 const isValidDuration = computed(() => {
@@ -407,11 +535,174 @@ function formatTime(seconds) {
   return `${h}h ${m}m ${s}s`
 }
 
+// Schedule Methods
+async function loadScheduleStatus() {
+  try {
+    const response = await api.getScheduleStatus()
+    scheduleStatus.value = response
+    
+    // Parse current configuration
+    if (response.start_time) {
+      const [hours, minutes] = response.start_time.split(':').map(Number)
+      if (hours === 0) {
+        scheduleHour.value = 12
+        scheduleAmPm.value = 'AM'
+      } else if (hours === 12) {
+        scheduleHour.value = 12
+        scheduleAmPm.value = 'PM'
+      } else if (hours > 12) {
+        scheduleHour.value = hours - 12
+        scheduleAmPm.value = 'PM'
+      } else {
+        scheduleHour.value = hours
+        scheduleAmPm.value = 'AM'
+      }
+      scheduleMinute.value = minutes
+    }
+    
+    if (response.duration_seconds) {
+      scheduleDurationHours.value = Math.floor(response.duration_seconds / 3600)
+      scheduleDurationMinutes.value = Math.floor((response.duration_seconds % 3600) / 60)
+    }
+    
+    // Update countdown
+    updateScheduleCountdown()
+  } catch (error) {
+    console.error('Error loading schedule status:', error)
+  }
+}
+
+function updateScheduleCountdown() {
+  if (!scheduleStatus.value?.currently_active || !scheduleStatus.value?.end_time) {
+    remainingScheduleTime.value = '--:--:--'
+    return
+  }
+  
+  // Calculate remaining time
+  const now = new Date()
+  const [endHours, endMinutes] = scheduleStatus.value.end_time.split(':').map(Number)
+  const endTime = new Date()
+  endTime.setHours(endHours, endMinutes, 0, 0)
+  
+  // If end time is before current time, it means it ends tomorrow
+  if (endTime < now) {
+    endTime.setDate(endTime.getDate() + 1)
+  }
+  
+  const remainingMs = endTime - now
+  if (remainingMs > 0) {
+    const hours = Math.floor(remainingMs / (1000 * 60 * 60))
+    const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000)
+    remainingScheduleTime.value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  } else {
+    remainingScheduleTime.value = '00:00:00'
+  }
+}
+
+async function toggleSchedule() {
+  scheduleLoading.value = true
+  
+  try {
+    if (scheduleStatus.value?.enabled) {
+      await api.disableSchedule()
+      showMessage('📅 Apagado programado deshabilitado', 'success')
+    } else {
+      await api.enableSchedule()
+      showMessage('📅 Apagado programado habilitado', 'success')
+    }
+    
+    await loadScheduleStatus()
+  } catch (error) {
+    showMessage(error.response?.data?.detail || 'Error al cambiar estado del schedule', 'error')
+  } finally {
+    scheduleLoading.value = false
+  }
+}
+
+async function saveScheduleConfig() {
+  scheduleLoading.value = true
+  
+  try {
+    // Convert 12h to 24h format
+    let hour24 = scheduleHour.value
+    if (scheduleAmPm.value === 'PM' && hour24 !== 12) {
+      hour24 += 12
+    } else if (scheduleAmPm.value === 'AM' && hour24 === 12) {
+      hour24 = 0
+    }
+    
+    const startTime = `${String(hour24).padStart(2, '0')}:${String(scheduleMinute.value).padStart(2, '0')}`
+    const durationSeconds = (scheduleDurationHours.value * 3600) + (scheduleDurationMinutes.value * 60)
+    
+    // Validate duration
+    if (durationSeconds < 1) {
+      showMessage('La duración debe ser al menos 1 segundo', 'error')
+      return
+    }
+    
+    if (durationSeconds > 28800) { // 8 hours
+      showMessage('La duración máxima es 8 horas', 'error')
+      return
+    }
+    
+    await api.configureSchedule(scheduleStatus.value?.enabled || false, startTime, durationSeconds)
+    showMessage('⏰ Configuración guardada correctamente', 'success')
+    
+    await loadScheduleStatus()
+  } catch (error) {
+    showMessage(error.response?.data?.detail || 'Error al guardar configuración', 'error')
+  } finally {
+    scheduleLoading.value = false
+  }
+}
+
+async function clearOverride() {
+  scheduleLoading.value = true
+  
+  try {
+    await api.clearScheduleOverride()
+    showMessage('🔄 Override manual limpiado', 'success')
+    
+    await loadScheduleStatus()
+    await loadStatus()
+  } catch (error) {
+    showMessage(error.response?.data?.detail || 'Error al limpiar override', 'error')
+  } finally {
+    scheduleLoading.value = false
+  }
+}
+
+function formatNextExecution(dateTimeStr) {
+  try {
+    const date = new Date(dateTimeStr)
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    
+    if (date.toDateString() === today.toDateString()) {
+      return `Hoy a las ${date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return `Mañana a las ${date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`
+    } else {
+      return date.toLocaleString('es', { 
+        day: 'numeric', 
+        month: 'short', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    }
+  } catch {
+    return dateTimeStr
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   console.log(`🚀 [ACTIONS VIEW] Componente montado - Iniciando carga de estado`)
   
   loadStatus()
+  loadScheduleStatus()
   
   // Actualizar estado cada 9 segundos
   statusInterval = setInterval(() => {
@@ -419,12 +710,28 @@ onMounted(() => {
     loadStatus()
   }, 9000)
   
-  console.log(`✅ [ACTIONS VIEW] Polling configurado cada 9 segundos`)
+  // Actualizar schedule cada 15 segundos
+  scheduleInterval = setInterval(() => {
+    loadScheduleStatus()
+  }, 15000)
+  
+  // Actualizar countdown cada segundo
+  scheduleCountdownInterval = setInterval(() => {
+    updateScheduleCountdown()
+  }, 1000)
+  
+  console.log(`✅ [ACTIONS VIEW] Polling configurado`)
 })
 
 onUnmounted(() => {
   if (statusInterval) {
     clearInterval(statusInterval)
+  }
+  if (scheduleInterval) {
+    clearInterval(scheduleInterval)
+  }
+  if (scheduleCountdownInterval) {
+    clearInterval(scheduleCountdownInterval)
   }
 })
 </script>
@@ -435,5 +742,14 @@ onUnmounted(() => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+/* Mejora para los selectores */
+select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
 }
 </style>

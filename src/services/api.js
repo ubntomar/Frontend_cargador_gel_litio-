@@ -60,9 +60,6 @@ export const api = {
     return response.data
   },
 
-  // MÉTODO ELIMINADO: cancelTemporaryOff() 
-  // Ahora se usa toggleLoad(0, 0, 1) para cancelar
-
   async getActionsStatus() {
     const response = await apiClient.get('/actions/status')
     return response.data
@@ -76,6 +73,41 @@ export const api = {
 
   async getHealthCheck() {
     const response = await apiClient.get('/health')
+    return response.data
+  },
+
+  // Schedule (Tareas Programadas)
+  async getScheduleStatus() {
+    const response = await apiClient.get('/schedule/')
+    return response.data
+  },
+
+  async configureSchedule(enabled, startTime, durationSeconds) {
+    const response = await apiClient.put('/schedule/config', {
+      enabled,
+      start_time: startTime,
+      duration_seconds: durationSeconds
+    })
+    return response.data
+  },
+
+  async enableSchedule() {
+    const response = await apiClient.post('/schedule/enable')
+    return response.data
+  },
+
+  async disableSchedule() {
+    const response = await apiClient.post('/schedule/disable')
+    return response.data
+  },
+
+  async clearScheduleOverride() {
+    const response = await apiClient.post('/schedule/clear_override')
+    return response.data
+  },
+
+  async getScheduleInfo() {
+    const response = await apiClient.get('/schedule/info')
     return response.data
   }
 }
