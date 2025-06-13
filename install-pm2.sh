@@ -80,10 +80,11 @@ echo
 # 1. Instalar PM2
 echo -e "${YELLOW}[1/6]${NC} Instalando PM2..."
 if ! command -v pm2 &> /dev/null; then
-    npm install -g pm2
+    echo -e "${BLUE}    🔑 PM2 requiere permisos sudo para instalación global...${NC}"
+    sudo npm install -g pm2
     echo -e "${GREEN}    ✅ PM2 instalado${NC}"
 else
-    echo -e "${GREEN}    ✅ PM2 ya está instalado${NC}"
+    echo -e "${GREEN}    ✅ PM2 ya está instalado ($(pm2 --version))${NC}"
 fi
 
 # 2. Crear estructura de logs
