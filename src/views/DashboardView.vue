@@ -22,7 +22,7 @@
           :title="energySourceType"
           :value="data.useFuenteDC ? data.fuenteDC_Amps : data.voltagePanel"
           :unit="data.useFuenteDC ? 'A' : 'V'"
-          :subtitle="data.useFuenteDC ? 'Configurados' : `${data.panelToBatteryCurrent} mA`"
+          :subtitle="data.useFuenteDC ? `${data.panelToBatteryCurrent} mA` : `${data.panelToBatteryCurrent} mA`"
           :icon-bg-class="data.useFuenteDC ? 'bg-blue-100' : 'bg-yellow-100'"
           :icon-class="data.useFuenteDC ? 'text-blue-600' : 'text-yellow-600'"
         />
