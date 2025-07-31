@@ -114,13 +114,13 @@ module.exports = {
     max_memory_restart: '500M',
     env: {
       NODE_ENV: 'development',
-      VITE_API_BASE_URL: 'http://192.168.8.100:8000',
+      VITE_API_BASE_URL: 'http://192.168.13.180:8000',
       VITE_POLLING_INTERVAL: '3000',
       PORT: 3000
     },
     env_production: {
       NODE_ENV: 'production',
-      VITE_API_BASE_URL: 'http://192.168.8.100:8000',
+      VITE_API_BASE_URL: 'http://192.168.13.180:8000',
       VITE_POLLING_INTERVAL: '5000',
       PORT: 3000
     },
@@ -177,7 +177,7 @@ echo -e "${BLUE}🌐 Tu aplicación está disponible en:${NC}"
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 echo "   🏠 Local:     http://localhost:3000"
 echo "   🌍 Red LAN:   http://$LOCAL_IP:3000"
-echo "   🍊 Orange Pi: http://192.168.8.100:3000"
+echo "   🍊 Orange Pi: http://192.168.13.180:3000"
 
 echo
 echo -e "${BLUE}📋 Comandos útiles:${NC}"

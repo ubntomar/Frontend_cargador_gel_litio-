@@ -75,7 +75,7 @@ Con PM2 configurado, tu aplicación estará disponible en:
 
 - 🏠 **Local**: http://localhost:3000
 - 🌍 **Red LAN**: http://[IP-LOCAL]:3000  
-- 🍊 **Orange Pi**: http://192.168.8.100:3000
+- 🍊 **Orange Pi**: http://192.168.13.180:3000
 
 ### 📊 Verificar que PM2 Funciona
 
@@ -124,7 +124,7 @@ Edita `ecosystem.config.js` para personalizar:
 // Cambiar variables de entorno
 env_production: {
   NODE_ENV: 'production',
-  VITE_API_BASE_URL: 'http://192.168.8.100:8000',  // Cambiar IP si necesario
+  VITE_API_BASE_URL: 'http://192.168.13.180:8000',  // Cambiar IP si necesario
   VITE_POLLING_INTERVAL: '5000',                    // Ajustar polling
   PORT: 3000                                        // Puerto personalizado
 }
@@ -189,7 +189,7 @@ src/
 
 Edita `.env` para configurar:
 
-- `VITE_API_BASE_URL`: URL de la API (default: http://192.168.8.100:8000)
+- `VITE_API_BASE_URL`: URL de la API (default: http://192.168.13.180:8000)
 - `VITE_POLLING_INTERVAL`: Intervalo de actualización en ms (default: 3000)
 - `VITE_MAX_CONCURRENT_REQUESTS`: Requests simultáneos máximos (default: 3)
 
