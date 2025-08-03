@@ -337,6 +337,11 @@
           <p class="text-sm text-gray-600">Firmware</p>
           <p class="text-xl font-semibold">{{ data.firmware_version }}</p>
         </div>
+        <div class="bg-white rounded-lg shadow p-4">
+          <p class="text-sm text-gray-600">Notas</p>
+          <p class="text-xl font-semibold">{{ data.notaPersonalizada }}</p>
+        </div>
+
       </div>
     </div>
   </div>
