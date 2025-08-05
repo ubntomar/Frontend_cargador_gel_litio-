@@ -109,6 +109,19 @@ export const api = {
   async getScheduleInfo() {
     const response = await apiClient.get('/schedule/info')
     return response.data
+  },
+
+  // Configuraciones personalizadas
+  async saveConfigurationFile(configData) {
+    const response = await apiClient.post('/config/configurations', {
+      data: configData
+    })
+    return response.data
+  },
+
+  async loadConfigurationFile() {
+    const response = await apiClient.get('/config/configurations')
+    return response.data
   }
 }
 

@@ -9,6 +9,9 @@
 
     <!-- Configuration Sections -->
     <div v-else class="space-y-6">
+      <!-- Configuration Manager -->
+      <ConfigurationManager @configurationApplied="onConfigurationAction" />
+
       <!-- Battery Configuration -->
       <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Configuración de Batería</h3>
@@ -145,7 +148,7 @@
     <!-- Success Message -->
     <transition name="fade">
       <div v-if="showSuccess" class="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg">
-        <p class="font-semibold">¡Configuración guardada!</p>
+        <p class="font-semibold">{{ successMessage }}</p>
       </div>
     </transition>
   </div>
@@ -156,12 +159,14 @@ import { ref, onMounted } from 'vue'
 import { useConfigStore } from '@/stores/configStore'
 import { useDataStore } from '@/stores/dataStore'
 import ParameterInput from '@/components/ParameterInput.vue'
+import ConfigurationManager from '@/components/ConfigurationManager.vue'
 
 const configStore = useConfigStore()
 const dataStore = useDataStore()
 
 const loading = ref(false)
 const showSuccess = ref(false)
+const successMessage = ref('¡Configuración guardada!')
 
 onMounted(async () => {
   loading.value = true
@@ -170,6 +175,23 @@ onMounted(async () => {
 })
 
 function onParameterSaved() {
+  successMessage.value = '¡Configuración guardada!'
+  showSuccess.value = true
+  setTimeout(() => {
+    showSuccess.value = false
+  }, 3000)
+}
+
+function onConfigurationAction(message) {
+  // Recargar los parámetros configurables para reflejar cambios
+  configStore.loadConfigurableParameters()
+  
+  // Mostrar mensaje
+  showSuccessMessage(message)
+}
+
+function showSuccessMessage(message) {
+  successMessage.value = message
   showSuccess.value = true
   setTimeout(() => {
     showSuccess.value = false
