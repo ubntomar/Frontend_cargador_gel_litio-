@@ -195,25 +195,22 @@
         <div v-if="scheduleStatus" class="space-y-4">
           <!-- Current Status -->
           <div v-if="scheduleStatus.enabled" class="p-3 rounded-lg" 
-               :class="scheduleStatus.currently_active ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50 border border-gray-200'">
+               :class="scheduleStatus.is_active ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50 border border-gray-200'">
             <div class="flex items-center justify-between">
               <div>
-                <p class="font-medium" :class="scheduleStatus.currently_active ? 'text-orange-800' : 'text-gray-800'">
-                  {{ scheduleStatus.currently_active ? '⏰ Apagado programado ACTIVO' : '📅 Programado para ejecutarse' }}
+                <p class="font-medium" :class="scheduleStatus.is_active ? 'text-orange-800' : 'text-gray-800'">
+                  {{ scheduleStatus.is_active ? '⏰ Apagado programado ACTIVO' : '📅 Programado para ejecutarse' }}
                 </p>
                 <p class="text-sm mt-1">
-                  <span v-if="scheduleStatus.currently_active">
-                    Terminará a las {{ scheduleStatus.end_time }}
+                  <span v-if="scheduleStatus.is_active">
+                    Terminará a las {{ scheduleStatus.startup_time }}
                   </span>
-                  <span v-else-if="scheduleStatus.next_execution">
-                    Próxima ejecución: {{ formatNextExecution(scheduleStatus.next_execution) }}
+                  <span v-else-if="scheduleStatus.next_shutdown">
+                    Próxima ejecución: {{ formatNextExecution(scheduleStatus.next_shutdown) }}
                   </span>
-                </p>
-                <p v-if="scheduleStatus.manual_override_active" class="text-sm text-amber-600 mt-1">
-                  ⚠️ Override manual activo - El schedule está anulado hasta mañana
                 </p>
               </div>
-              <div v-if="scheduleStatus.currently_active" class="text-right">
+              <div v-if="scheduleStatus.is_active" class="text-right">
                 <p class="text-sm text-gray-600">Tiempo restante</p>
                 <p class="font-mono text-lg font-bold text-orange-700">{{ remainingScheduleTime }}</p>
               </div>
@@ -541,9 +538,9 @@ async function loadScheduleStatus() {
     const response = await api.getScheduleStatus()
     scheduleStatus.value = response
     
-    // Parse current configuration
-    if (response.start_time) {
-      const [hours, minutes] = response.start_time.split(':').map(Number)
+    // Parse current configuration para la nueva API
+    if (response.shutdown_time) {
+      const [hours, minutes] = response.shutdown_time.split(':').map(Number)
       if (hours === 0) {
         scheduleHour.value = 12
         scheduleAmPm.value = 'AM'
@@ -560,9 +557,23 @@ async function loadScheduleStatus() {
       scheduleMinute.value = minutes
     }
     
-    if (response.duration_seconds) {
-      scheduleDurationHours.value = Math.floor(response.duration_seconds / 3600)
-      scheduleDurationMinutes.value = Math.floor((response.duration_seconds % 3600) / 60)
+    // La nueva API maneja startup_time en lugar de duration
+    if (response.startup_time) {
+      const shutdownTime = response.shutdown_time ? response.shutdown_time.split(':').map(Number) : [22, 0]
+      const startupTime = response.startup_time.split(':').map(Number)
+      
+      // Calcular duración basada en shutdown y startup time
+      let shutdownMinutes = shutdownTime[0] * 60 + shutdownTime[1]
+      let startupMinutes = startupTime[0] * 60 + startupTime[1]
+      
+      // Si startup es al día siguiente
+      if (startupMinutes < shutdownMinutes) {
+        startupMinutes += 24 * 60
+      }
+      
+      const durationMinutes = startupMinutes - shutdownMinutes
+      scheduleDurationHours.value = Math.floor(durationMinutes / 60)
+      scheduleDurationMinutes.value = durationMinutes % 60
     }
     
     // Update countdown
@@ -573,14 +584,14 @@ async function loadScheduleStatus() {
 }
 
 function updateScheduleCountdown() {
-  if (!scheduleStatus.value?.currently_active || !scheduleStatus.value?.end_time) {
+  if (!scheduleStatus.value?.is_active || !scheduleStatus.value?.startup_time) {
     remainingScheduleTime.value = '--:--:--'
     return
   }
   
-  // Calculate remaining time
+  // Calculate remaining time usando startup_time de la nueva API
   const now = new Date()
-  const [endHours, endMinutes] = scheduleStatus.value.end_time.split(':').map(Number)
+  const [endHours, endMinutes] = scheduleStatus.value.startup_time.split(':').map(Number)
   const endTime = new Date()
   endTime.setHours(endHours, endMinutes, 0, 0)
   
@@ -604,12 +615,17 @@ async function toggleSchedule() {
   scheduleLoading.value = true
   
   try {
-    if (scheduleStatus.value?.enabled) {
-      await api.disableSchedule()
-      showMessage('📅 Apagado programado deshabilitado', 'success')
-    } else {
-      await api.enableSchedule()
+    const newEnabled = !scheduleStatus.value?.enabled
+    
+    // Usar la nueva API que requiere configurar enabled/disabled
+    await api.configureSchedule(newEnabled, 
+      scheduleStatus.value?.shutdown_time || '22:00', 
+      0) // durationSeconds no se usa en la nueva API
+    
+    if (newEnabled) {
       showMessage('📅 Apagado programado habilitado', 'success')
+    } else {
+      showMessage('📅 Apagado programado deshabilitado', 'success')
     }
     
     await loadScheduleStatus()
@@ -632,21 +648,31 @@ async function saveScheduleConfig() {
       hour24 = 0
     }
     
-    const startTime = `${String(hour24).padStart(2, '0')}:${String(scheduleMinute.value).padStart(2, '0')}`
-    const durationSeconds = (scheduleDurationHours.value * 3600) + (scheduleDurationMinutes.value * 60)
+    const shutdownTime = `${String(hour24).padStart(2, '0')}:${String(scheduleMinute.value).padStart(2, '0')}`
+    
+    // Calcular startup time basado en la duración
+    const totalDurationMinutes = (scheduleDurationHours.value * 60) + scheduleDurationMinutes.value
     
     // Validate duration
-    if (durationSeconds < 1) {
-      showMessage('La duración debe ser al menos 1 segundo', 'error')
+    if (totalDurationMinutes < 1) {
+      showMessage('La duración debe ser al menos 1 minuto', 'error')
       return
     }
     
-    if (durationSeconds > 28800) { // 8 hours
+    if (totalDurationMinutes > 480) { // 8 hours
       showMessage('La duración máxima es 8 horas', 'error')
       return
     }
     
-    await api.configureSchedule(scheduleStatus.value?.enabled || false, startTime, durationSeconds)
+    // Calcular startup time
+    const shutdownMinutes = hour24 * 60 + scheduleMinute.value
+    const startupMinutes = shutdownMinutes + totalDurationMinutes
+    const startupHour = Math.floor(startupMinutes / 60) % 24
+    const startupMinute = startupMinutes % 60
+    const startupTime = `${String(startupHour).padStart(2, '0')}:${String(startupMinute).padStart(2, '0')}`
+    
+    // Usar la nueva API con shutdown_time y startup_time
+    await api.configureSchedule(scheduleStatus.value?.enabled || false, shutdownTime, startupTime)
     showMessage('⏰ Configuración guardada correctamente', 'success')
     
     await loadScheduleStatus()

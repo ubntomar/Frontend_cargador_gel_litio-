@@ -38,7 +38,7 @@ export const useDataStore = defineStore('data', () => {
     try {
       const response = await api.getAllData()
       data.value = response
-      connected.value = response.connected
+      connected.value = response.connected || true
       lastUpdate.value = new Date()
     } catch (err) {
       error.value = err.message

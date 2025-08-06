@@ -50,23 +50,28 @@ export const api = {
   },
 
   async getParameter(parameter) {
-    const response = await apiClient.get(`/data/${parameter}`)
+    const response = await apiClient.get(`/data/`)
     return response.data
   },
 
   // Configuración
   async getConfigurableParameters() {
-    const response = await apiClient.get('/config/')
+    const response = await apiClient.get('/data/')
     return response.data
   },
 
   async setParameter(parameter, value) {
-    const response = await apiClient.put(`/config/${parameter}`, { value })
+    const response = await apiClient.post('/config/parameter', { 
+      parameter, 
+      value 
+    })
     return response.data
   },
 
   async validateParameter(parameter, value) {
-    const response = await apiClient.post('/config/validate', { parameter, value })
+    const response = await apiClient.post('/config/custom/configurations/validate', { 
+      [parameter]: value 
+    })
     return response.data
   },
 
@@ -87,7 +92,7 @@ export const api = {
 
   // Estado
   async getConnectionStatus() {
-    const response = await apiClient.get('/data/status/connection')
+    const response = await apiClient.get('/health')
     return response.data
   },
 
@@ -98,49 +103,78 @@ export const api = {
 
   // Schedule (Tareas Programadas)
   async getScheduleStatus() {
-    const response = await apiClient.get('/schedule/')
+    const response = await apiClient.get('/schedule')
     return response.data
   },
 
-  async configureSchedule(enabled, startTime, durationSeconds) {
-    const response = await apiClient.put('/schedule/config', {
+  async configureSchedule(enabled, shutdownTime, startupTime) {
+    const response = await apiClient.post('/schedule/set', {
       enabled,
-      start_time: startTime,
-      duration_seconds: durationSeconds
+      shutdown_time: shutdownTime,
+      startup_time: startupTime || shutdownTime
     })
     return response.data
   },
 
   async enableSchedule() {
-    const response = await apiClient.post('/schedule/enable')
-    return response.data
-  },
-
-  async disableSchedule() {
-    const response = await apiClient.post('/schedule/disable')
-    return response.data
-  },
-
-  async clearScheduleOverride() {
-    const response = await apiClient.post('/schedule/clear_override')
-    return response.data
-  },
-
-  async getScheduleInfo() {
-    const response = await apiClient.get('/schedule/info')
-    return response.data
-  },
-
-  // Configuraciones personalizadas
-  async saveConfigurationFile(configData) {
-    const response = await apiClient.post('/config/configurations', {
-      data: configData
+    const response = await apiClient.post('/schedule/set', {
+      enabled: true
     })
     return response.data
   },
 
+  async disableSchedule() {
+    const response = await apiClient.post('/schedule/set', {
+      enabled: false
+    })
+    return response.data
+  },
+
+  async clearScheduleOverride() {
+    const response = await apiClient.post('/schedule/set', {
+      enabled: false
+    })
+    return response.data
+  },
+
+  async getScheduleInfo() {
+    const response = await apiClient.get('/schedule')
+    return response.data
+  },
+
+  // Configuraciones personalizadas
+  async saveConfigurationFile(name, configData) {
+    const response = await apiClient.post(`/config/custom/configurations/${name}`, configData)
+    return response.data
+  },
+
   async loadConfigurationFile() {
-    const response = await apiClient.get('/config/configurations')
+    const response = await apiClient.get('/config/custom/configurations')
+    return response.data
+  },
+
+  async deleteConfiguration(name) {
+    const response = await apiClient.delete(`/config/custom/configurations/${name}`)
+    return response.data
+  },
+
+  async applyConfiguration(name) {
+    const response = await apiClient.post(`/config/custom/configurations/${name}/apply`)
+    return response.data
+  },
+
+  async exportConfigurations() {
+    const response = await apiClient.get('/config/custom/configurations/export')
+    return response.data
+  },
+
+  async getConfigurationInfo() {
+    const response = await apiClient.get('/config/custom/configurations/info')
+    return response.data
+  },
+
+  async validateConfiguration(configData) {
+    const response = await apiClient.post('/config/custom/configurations/validate', configData)
     return response.data
   }
 }

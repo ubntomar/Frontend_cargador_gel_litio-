@@ -166,6 +166,15 @@ async function saveCurrentConfiguration() {
   saving.value = true
   try {
     const currentConfig = configStore.getCurrentConfiguration()
+    
+    // Validar configuración antes de guardar usando la nueva API
+    try {
+      await configStore.validateConfiguration(currentConfig)
+    } catch (validationError) {
+      emit('configurationApplied', 'Error de validación: ' + validationError.message)
+      return
+    }
+    
     await configStore.saveConfiguration(newConfigName.value.trim(), currentConfig)
     newConfigName.value = ''
     emit('configurationApplied', 'Configuración guardada exitosamente')
@@ -180,7 +189,8 @@ async function saveCurrentConfiguration() {
 async function applyConfiguration(name, config) {
   applying.value = name
   try {
-    await configStore.applyConfiguration(config)
+    // Usar la nueva API que aplica configuraciones por nombre
+    await configStore.applyConfiguration(config, name)
     emit('configurationApplied', `Configuración "${name}" aplicada exitosamente`)
   } catch (error) {
     console.error('Error al aplicar configuración:', error)
@@ -228,15 +238,35 @@ async function deleteConfiguration() {
   }
 }
 
-function exportConfigurations() {
-  const dataStr = JSON.stringify(savedConfigs.value, null, 2)
-  const dataBlob = new Blob([dataStr], { type: 'application/json' })
-  const url = URL.createObjectURL(dataBlob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `configuraciones_cargador_${new Date().toISOString().split('T')[0]}.json`
-  link.click()
-  URL.revokeObjectURL(url)
+async function exportConfigurations() {
+  try {
+    // Usar la nueva API de exportación
+    const exportData = await configStore.exportConfigurations()
+    
+    const dataStr = JSON.stringify(exportData, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `configuraciones_cargador_${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    
+    emit('configurationApplied', 'Configuraciones exportadas exitosamente')
+  } catch (error) {
+    console.error('Error al exportar configuraciones:', error)
+    // Fallback al método anterior si la nueva API no está disponible
+    const dataStr = JSON.stringify(savedConfigs.value, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `configuraciones_cargador_${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    
+    emit('configurationApplied', 'Configuraciones exportadas (modo legacy)')
+  }
 }
 
 function importConfigurations(event) {

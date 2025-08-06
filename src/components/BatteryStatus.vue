@@ -64,7 +64,7 @@ const dataStore = useDataStore()
 
 const batteryPercentage = computed(() => dataStore.batteryPercentage)
 const voltage = computed(() => dataStore.data?.voltageBatterySensor2 || 0)
-const current = computed(() => (dataStore.data?.batteryToLoadCurrent || 0) / 1000)
+const current = computed(() => (dataStore.data?.panelToBatteryCurrent || 0))
 const capacity = computed(() => dataStore.data?.batteryCapacity || 0)
 const batteryType = computed(() => dataStore.data?.isLithium ? 'Litio' : 'GEL/AGM')
 const chargeState = computed(() => dataStore.data?.chargeState || 'UNKNOWN')

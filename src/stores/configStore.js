@@ -13,8 +13,20 @@ export const useConfigStore = defineStore('config', () => {
     error.value = null
 
     try {
-      const response = await api.getConfigurableParameters()
-      configurableParameters.value = response.parameter_info || {}
+      const response = await api.getAllData()
+      // Convertir los datos del ESP32 en formato de parámetros configurables usando los campos reales
+      configurableParameters.value = {
+        batteryCapacity: { current_value: response.batteryCapacity },
+        isLithium: { current_value: response.isLithium },
+        thresholdPercentage: { current_value: response.thresholdPercentage },
+        maxAllowedCurrent: { current_value: response.maxAllowedCurrent },
+        bulkVoltage: { current_value: response.bulkVoltage },
+        absorptionVoltage: { current_value: response.absorptionVoltage },
+        floatVoltage: { current_value: response.floatVoltage },
+        useFuenteDC: { current_value: response.useFuenteDC },
+        fuenteDC_Amps: { current_value: response.fuenteDC_Amps },
+        factorDivider: { current_value: response.factorDivider }
+      }
     } catch (err) {
       error.value = err.message
     } finally {
@@ -28,6 +40,12 @@ export const useConfigStore = defineStore('config', () => {
 
     try {
       const response = await api.setParameter(parameter, value)
+      
+      // Actualizar el valor en el store si la respuesta fue exitosa
+      if (response.success && configurableParameters.value[parameter]) {
+        configurableParameters.value[parameter].current_value = value
+      }
+      
       return response
     } catch (err) {
       error.value = err.message
@@ -40,16 +58,11 @@ export const useConfigStore = defineStore('config', () => {
   // Funciones para manejo de configuraciones personalizadas
   async function saveConfiguration(name, config) {
     try {
-      const configurations = await loadSavedConfigurations()
-      configurations[name] = {
-        ...config,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
+      // Usar la nueva API para crear configuración
+      const response = await api.saveConfigurationFile(name, config)
       
-      const configString = JSON.stringify(configurations, null, 2)
-      await api.saveConfigurationFile(configString)
-      savedConfigurations.value = configurations
+      // Recargar configuraciones para obtener la lista actualizada
+      await loadSavedConfigurations()
       return true
     } catch (err) {
       error.value = err.message
@@ -66,7 +79,7 @@ export const useConfigStore = defineStore('config', () => {
       }
       return {}
     } catch (err) {
-      console.log('No se encontró archivo de configuraciones existente, creando uno nuevo')
+      console.log('No se encontraron configuraciones existentes')
       savedConfigurations.value = {}
       return {}
     }
@@ -74,12 +87,10 @@ export const useConfigStore = defineStore('config', () => {
 
   async function deleteConfiguration(name) {
     try {
-      const configurations = await loadSavedConfigurations()
-      delete configurations[name]
+      await api.deleteConfiguration(name)
       
-      const configString = JSON.stringify(configurations, null, 2)
-      await api.saveConfigurationFile(configString)
-      savedConfigurations.value = configurations
+      // Recargar configuraciones para obtener la lista actualizada
+      await loadSavedConfigurations()
       return true
     } catch (err) {
       error.value = err.message
@@ -87,19 +98,26 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
-  async function applyConfiguration(config) {
+  async function applyConfiguration(config, configName) {
     loading.value = true
     error.value = null
 
     try {
-      const promises = []
-      for (const [parameter, value] of Object.entries(config)) {
-        if (parameter !== 'createdAt' && parameter !== 'updatedAt') {
-          promises.push(api.setParameter(parameter, value))
+      // Si tenemos el nombre de la configuración, usar el endpoint de aplicar
+      if (configName) {
+        const response = await api.applyConfiguration(configName)
+        return response
+      } else {
+        // Método alternativo: aplicar parámetro por parámetro
+        const promises = []
+        for (const [parameter, value] of Object.entries(config)) {
+          if (parameter !== 'createdAt' && parameter !== 'updatedAt') {
+            promises.push(api.setParameter(parameter, value))
+          }
         }
+        await Promise.all(promises)
+        return { success: true }
       }
-      await Promise.all(promises)
-      return true
     } catch (err) {
       error.value = err.message
       throw err
@@ -135,6 +153,37 @@ export const useConfigStore = defineStore('config', () => {
     return currentConfig
   }
 
+  // Nuevas funciones para aprovechar la API actualizada
+  async function validateConfiguration(config) {
+    try {
+      const response = await api.validateConfiguration(config)
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  async function exportConfigurations() {
+    try {
+      const response = await api.exportConfigurations()
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  async function getConfigurationInfo() {
+    try {
+      const response = await api.getConfigurationInfo()
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
   return {
     configurableParameters,
     savedConfigurations,
@@ -146,6 +195,9 @@ export const useConfigStore = defineStore('config', () => {
     loadSavedConfigurations,
     deleteConfiguration,
     applyConfiguration,
-    getCurrentConfiguration
+    getCurrentConfiguration,
+    validateConfiguration,
+    exportConfigurations,
+    getConfigurationInfo
   }
 })
