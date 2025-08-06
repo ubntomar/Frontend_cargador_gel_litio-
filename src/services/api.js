@@ -1,11 +1,23 @@
 import axios from 'axios'
 
+// Configuración desde variables de entorno
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.13.180:8000'
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000
+const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true'
+
+// Log de configuración en modo debug
+if (DEBUG_MODE) {
+  console.log('🔧 API Configuration:', {
+    baseURL: API_BASE_URL,
+    timeout: API_TIMEOUT,
+    debugMode: DEBUG_MODE
+  })
+}
 
 // Crear instancia de axios con configuración base
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -14,8 +26,16 @@ const apiClient = axios.create({
 
 // Interceptor para manejo de errores
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    if (DEBUG_MODE) {
+      console.log('📡 API Response:', response.config.url, response.status)
+    }
+    return response
+  },
   error => {
+    if (DEBUG_MODE) {
+      console.error('❌ API Error:', error.config?.url, error.message)
+    }
     console.error('API Error:', error)
     return Promise.reject(error)
   }

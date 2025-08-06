@@ -13,11 +13,85 @@ npm install
 # Configurar variables de entorno
 cp .env.example .env
 # Editar .env con la IP de tu API
+nano .env
 
 # Iniciar en modo desarrollo
 ./start.sh
 # o manualmente:
 npm run dev
+```
+
+## ⚙️ Configuración de Variables de Entorno
+
+El proyecto usa archivos `.env` para manejar la configuración de manera flexible:
+
+### 📄 Archivos de Configuración
+
+- **`.env.example`**: Plantilla con todas las variables disponibles
+- **`.env`**: Tu configuración específica (no se sube a git)
+
+### 🔧 Variables Disponibles
+
+```bash
+# URL de la API del Orange Pi
+VITE_API_BASE_URL=http://192.168.13.180:8000
+
+# Puerto del servidor de desarrollo
+VITE_DEV_PORT=5173
+
+# Información de la aplicación
+VITE_APP_NAME=ESP32 Solar Cargador
+VITE_APP_VERSION=1.0.0
+
+# Timeout de las peticiones API (milisegundos)
+VITE_API_TIMEOUT=10000
+
+# Modo debug (muestra logs adicionales)
+VITE_DEBUG_MODE=false
+```
+
+### 🛠️ Configuración Inicial
+
+1. **Copia el archivo de ejemplo:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edita tu configuración:**
+   ```bash
+   nano .env
+   ```
+
+3. **Cambia la IP de tu Orange Pi:**
+   ```bash
+   VITE_API_BASE_URL=http://TU_IP_ORANGEPI:8000
+   ```
+
+4. **Guarda y reinicia el servidor de desarrollo**
+
+### 🛠️ Scripts de Configuración
+
+El proyecto incluye scripts útiles para manejar la configuración:
+
+#### `./configure-ip.sh`
+Configurar fácilmente la IP del Orange Pi:
+```bash
+./configure-ip.sh
+# Te pedirá la nueva IP y actualizará automáticamente el .env
+```
+
+#### `./check-config.sh`
+Verificar la configuración actual y conectividad:
+```bash
+./check-config.sh
+# Muestra la configuración y prueba la conexión con la API
+```
+
+#### `./start.sh`
+Iniciar el servidor de desarrollo:
+```bash
+./start.sh
+# Carga automáticamente la configuración del .env
 ```
 
 ## 🔄 **Configuración PM2 para Persistencia** ⭐
