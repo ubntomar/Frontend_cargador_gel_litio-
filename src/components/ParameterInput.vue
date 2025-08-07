@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-2">
+  <div class="space-y-2 relative">
     <label :for="parameter" class="block text-sm font-medium text-gray-700">
       {{ label }}
     </label>
@@ -49,17 +49,70 @@
       <button
         @click="save"
         :disabled="saving || !!error"
-        class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all duration-200"
       >
-        {{ saving ? 'Guardando...' : 'Guardar' }}
+        <!-- Spinner mejorado -->
+        <svg 
+          v-if="saving" 
+          class="animate-spin h-4 w-4 text-white" 
+          xmlns="http://www.w3.org/2000/svg" 
+          fill="none" 
+          viewBox="0 0 24 24"
+        >
+          <circle 
+            class="opacity-25" 
+            cx="12" 
+            cy="12" 
+            r="10" 
+            stroke="currentColor" 
+            stroke-width="4"
+          ></circle>
+          <path 
+            class="opacity-75" 
+            fill="currentColor" 
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        <span v-if="saving">Aplicando... (hasta 15s)</span>
+        <span v-else>💾 Guardar</span>
       </button>
       <button
         @click="reset"
         :disabled="saving"
-        class="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+        class="px-4 py-2 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
       >
-        Cancelar
+        ❌ Cancelar
       </button>
+    </div>
+
+    <!-- Loading overlay para el input cuando está guardando -->
+    <div 
+      v-if="saving" 
+      class="absolute inset-0 bg-blue-50 bg-opacity-75 rounded-md flex items-center justify-center backdrop-blur-sm"
+    >
+      <div class="flex items-center space-x-2 text-blue-700">
+        <svg 
+          class="animate-spin h-5 w-5" 
+          xmlns="http://www.w3.org/2000/svg" 
+          fill="none" 
+          viewBox="0 0 24 24"
+        >
+          <circle 
+            class="opacity-25" 
+            cx="12" 
+            cy="12" 
+            r="10" 
+            stroke="currentColor" 
+            stroke-width="4"
+          ></circle>
+          <path 
+            class="opacity-75" 
+            fill="currentColor" 
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        <span class="text-sm font-medium">Configurando ESP32...</span>
+      </div>
     </div>
   </div>
 </template>
@@ -68,6 +121,7 @@
 import { ref, computed, watch } from 'vue'
 import { useConfigStore } from '@/stores/configStore'
 import { useDataStore } from '@/stores/dataStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 const props = defineProps({
   parameter: {
@@ -108,6 +162,7 @@ const emit = defineEmits(['saved', 'error'])
 
 const configStore = useConfigStore()
 const dataStore = useDataStore()
+const notificationStore = useNotificationStore()
 
 const localValue = ref(null)
 const originalValue = ref(null)
@@ -164,6 +219,13 @@ async function save() {
   if (error.value) return
   
   saving.value = true
+  error.value = '' // Limpiar errores anteriores
+  
+  // Sanitizar el label para evitar problemas con caracteres especiales
+  const sanitizedLabel = props.label.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  
+  // Mostrar notificación de loading
+  const notificationId = notificationStore.configurationOperation(sanitizedLabel, 'saving')
   
   try {
     await configStore.updateParameter(props.parameter, localValue.value)
@@ -172,9 +234,35 @@ async function save() {
     // Actualizar datos
     await dataStore.fetchData()
     
+    // Cerrar notificación de loading y mostrar éxito
+    notificationStore.closeNotification(notificationId)
+    notificationStore.configurationOperation(sanitizedLabel, 'success')
+    
     emit('saved', localValue.value)
   } catch (err) {
-    error.value = err.response?.data?.detail || 'Error al guardar'
+    console.error('Error al guardar parámetro:', err)
+    
+    // Cerrar notificación de loading
+    notificationStore.closeNotification(notificationId)
+    
+    // Manejo específico de diferentes tipos de error
+    if (err.message.includes('timeout')) {
+      error.value = `⏰ Timeout al configurar ${props.parameter}. El ESP32 puede estar ocupado, intenta en unos segundos.`
+      notificationStore.configurationOperation(sanitizedLabel, 'timeout')
+    } else if (err.message.includes('lock')) {
+      error.value = `🔒 ESP32 ocupado configurando otro parámetro. Espera unos segundos e intenta nuevamente.`
+      notificationStore.configurationOperation(sanitizedLabel, 'lock')
+    } else if (err.response?.status === 422) {
+      error.value = `❌ Valor inválido para ${props.parameter}: ${err.response?.data?.detail || 'Verifica el rango permitido'}`
+      notificationStore.error(`Valor inválido`, `${sanitizedLabel}: ${err.response?.data?.detail || 'Verifica el rango permitido'}`)
+    } else if (err.response?.status === 500) {
+      error.value = `🔧 Error interno del ESP32. Verifica la conexión y estado del dispositivo.`
+      notificationStore.error(`Error ESP32`, `${sanitizedLabel}: Verifica la conexión y estado del dispositivo`)
+    } else {
+      error.value = err.response?.data?.detail || err.message || 'Error al guardar'
+      notificationStore.configurationOperation(sanitizedLabel, 'error')
+    }
+    
     emit('error', err)
   } finally {
     saving.value = false

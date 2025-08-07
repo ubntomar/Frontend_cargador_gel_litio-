@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Debug DOMException: Invalid Character</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .test-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .success { 
+            background: #f0f9ff; 
+            border-color: #0ea5e9;
+            color: #0c4a6e;
+        }
+        .error { 
+            background: #fef2f2; 
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+        .warning { 
+            background: #fffbeb; 
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #2563eb; }
+        .log-entry {
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico: DOMException Invalid Character</h1>
+        <p>Esta página ayuda a diagnosticar el error "String contains an invalid character" al cambiar parámetros individuales.</p>
+        
+        <div class="test-section" id="character-test">
+            <div class="test-title">📝 Test 1: Análisis de Caracteres Problemáticos</div>
+            <p>Probando strings que podrían causar problemas:</p>
+            <button onclick="testCharacterEncoding()">🧪 Probar Caracteres</button>
+            <div id="character-results"></div>
+        </div>
+
+        <div class="test-section" id="btoa-test">
+            <div class="test-title">🔍 Test 2: Base64 Encoding (btoa)</div>
+            <p>Verificando si el error viene de btoa() con caracteres especiales:</p>
+            <button onclick="testBtoaProblems()">🧪 Probar btoa()</button>
+            <div id="btoa-results"></div>
+        </div>
+
+        <div class="test-section" id="url-test">
+            <div class="test-title">🌐 Test 3: URL Encoding</div>
+            <p>Probando problemas con URLs y caracteres especiales:</p>
+            <button onclick="testUrlProblems()">🧪 Probar URLs</button>
+            <div id="url-results"></div>
+        </div>
+
+        <div class="test-section" id="api-test">
+            <div class="test-title">🔌 Test 4: API Calls con "Usar Fuente DC"</div>
+            <p>Probando la llamada específica que causa el error:</p>
+            <button onclick="testUseFuenteDC()">🧪 Probar API Call</button>
+            <div id="api-results"></div>
+        </div>
+
+        <div class="test-section" id="json-test">
+            <div class="test-title">📄 Test 5: JSON Stringify/Parse</div>
+            <p>Verificando problemas con JSON y caracteres especiales:</p>
+            <button onclick="testJsonProblems()">🧪 Probar JSON</button>
+            <div id="json-results"></div>
+        </div>
+
+        <div class="test-section" id="notification-test">
+            <div class="test-title">🔔 Test 6: Sistema de Notificaciones</div>
+            <p>Probando si el error viene del sistema de notificaciones:</p>
+            <button onclick="testNotificationStrings()">🧪 Probar Notificaciones</button>
+            <div id="notification-results"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📊 Registro de Errores en Tiempo Real</div>
+            <button onclick="setupErrorListener()">🎧 Activar Listener de Errores</button>
+            <button onclick="clearLogs()">🧹 Limpiar Logs</button>
+            <div id="error-logs"></div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales para logging
+        let errorListener = false;
+        let logContainer = null;
+
+        // Función para logging
+        function log(message, type = 'info') {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            if (logContainer) {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logContainer.appendChild(entry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        }
+
+        // Setup del listener de errores
+        function setupErrorListener() {
+            if (errorListener) return;
+            
+            logContainer = document.getElementById('error-logs');
+            errorListener = true;
+            
+            // Listener para errores no capturados
+            window.addEventListener('error', (event) => {
+                log(`ERROR: ${event.message} at ${event.filename}:${event.lineno}`, 'error');
+            });
+
+            // Listener para promises rechazadas
+            window.addEventListener('unhandledrejection', (event) => {
+                log(`UNHANDLED PROMISE REJECTION: ${event.reason}`, 'error');
+            });
+
+            log('Error listener activado', 'success');
+        }
+
+        function clearLogs() {
+            if (logContainer) {
+                logContainer.innerHTML = '';
+            }
+        }
+
+        // Test 1: Análisis de caracteres problemáticos
+        function testCharacterEncoding() {
+            const container = document.getElementById('character-results');
+            container.innerHTML = '<div style="margin: 10px 0;">Probando caracteres...</div>';
+            
+            const problematicStrings = [
+                'Usar Fuente DC',
+                'useFuenteDC',
+                'Configuración',
+                'parámetro',
+                'Batería',
+                'español',
+                'ñáéíóú',
+                'ÑÁÉÍÓÚ',
+                '°C',
+                'μ',
+                '±',
+                '€',
+                '∞'
+            ];
+
+            let results = '<h4>Resultados de pruebas de caracteres:</h4>';
+            
+            problematicStrings.forEach(str => {
+                try {
+                    // Test btoa
+                    try {
+                        btoa(str);
+                        results += `✅ btoa("${str}") - OK<br>`;
+                    } catch (e) {
+                        results += `❌ btoa("${str}") - ERROR: ${e.message}<br>`;
+                        log(`btoa failed for: ${str} - ${e.message}`, 'error');
+                    }
+
+                    // Test encodeURIComponent
+                    try {
+                        encodeURIComponent(str);
+                        results += `✅ encodeURIComponent("${str}") - OK<br>`;
+                    } catch (e) {
+                        results += `❌ encodeURIComponent("${str}") - ERROR: ${e.message}<br>`;
+                        log(`encodeURIComponent failed for: ${str} - ${e.message}`, 'error');
+                    }
+
+                    // Test JSON.stringify
+                    try {
+                        JSON.stringify({parameter: str, value: true});
+                        results += `✅ JSON.stringify("${str}") - OK<br>`;
+                    } catch (e) {
+                        results += `❌ JSON.stringify("${str}") - ERROR: ${e.message}<br>`;
+                        log(`JSON.stringify failed for: ${str} - ${e.message}`, 'error');
+                    }
+
+                    results += '<hr style="margin: 5px 0;">';
+                } catch (error) {
+                    results += `❌ Error general con "${str}": ${error.message}<br>`;
+                    log(`General error with: ${str} - ${error.message}`, 'error');
+                }
+            });
+
+            container.innerHTML = results;
+        }
+
+        // Test 2: Problemas con btoa
+        function testBtoaProblems() {
+            const container = document.getElementById('btoa-results');
+            let results = '<h4>Pruebas de btoa():</h4>';
+
+            const testStrings = [
+                'Usar Fuente DC',
+                'useFuenteDC: true',
+                JSON.stringify({parameter: 'useFuenteDC', value: true}),
+                'Configuración parámetro'
+            ];
+
+            testStrings.forEach(str => {
+                try {
+                    const encoded = btoa(str);
+                    results += `✅ btoa("${str}") = "${encoded}"<br>`;
+                } catch (error) {
+                    results += `❌ btoa("${str}") ERROR: ${error.message}<br>`;
+                    log(`btoa error: ${str} - ${error.message}`, 'error');
+                    
+                    // Try with UTF-8 encoding
+                    try {
+                        const utf8Str = unescape(encodeURIComponent(str));
+                        const encoded = btoa(utf8Str);
+                        results += `✅ btoa(UTF8("${str}")) = "${encoded}"<br>`;
+                    } catch (utf8Error) {
+                        results += `❌ btoa(UTF8("${str}")) ERROR: ${utf8Error.message}<br>`;
+                    }
+                }
+            });
+
+            container.innerHTML = results;
+        }
+
+        // Test 3: Problemas con URLs
+        function testUrlProblems() {
+            const container = document.getElementById('url-results');
+            let results = '<h4>Pruebas de URL:</h4>';
+
+            const baseUrl = 'http://localhost:8000';
+            const testParams = [
+                'useFuenteDC',
+                'Usar Fuente DC',
+                'configuración'
+            ];
+
+            testParams.forEach(param => {
+                try {
+                    // Test URL construction
+                    const url1 = `${baseUrl}/config/parameter?param=${param}`;
+                    results += `✅ URL Simple: ${url1}<br>`;
+
+                    // Test with encodeURIComponent
+                    const url2 = `${baseUrl}/config/parameter?param=${encodeURIComponent(param)}`;
+                    results += `✅ URL Encoded: ${url2}<br>`;
+
+                    // Test URL object
+                    const urlObj = new URL(`${baseUrl}/config/parameter`);
+                    urlObj.searchParams.set('param', param);
+                    results += `✅ URL Object: ${urlObj.toString()}<br>`;
+
+                } catch (error) {
+                    results += `❌ URL Error con "${param}": ${error.message}<br>`;
+                    log(`URL error: ${param} - ${error.message}`, 'error');
+                }
+                results += '<hr style="margin: 5px 0;">';
+            });
+
+            container.innerHTML = results;
+        }
+
+        // Test 4: API Call específica
+        async function testUseFuenteDC() {
+            const container = document.getElementById('api-results');
+            container.innerHTML = '<div>🔄 Probando API call...</div>';
+
+            try {
+                log('Iniciando test de API para useFuenteDC', 'info');
+                
+                const requestData = {
+                    parameter: 'useFuenteDC',
+                    value: true
+                };
+
+                log(`Request data: ${JSON.stringify(requestData)}`, 'info');
+
+                const response = await fetch('http://localhost:8000/config/parameter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                log(`Response status: ${response.status}`, 'info');
+                
+                const result = await response.json();
+                log(`Response data: ${JSON.stringify(result)}`, 'info');
+
+                container.innerHTML = `
+                    <h4>✅ API Call Exitosa</h4>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                log(`API call error: ${error.message}`, 'error');
+                container.innerHTML = `
+                    <h4>❌ Error en API Call</h4>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <pre>${error.stack || 'No stack trace'}</pre>
+                `;
+            }
+        }
+
+        // Test 5: Problemas con JSON
+        function testJsonProblems() {
+            const container = document.getElementById('json-results');
+            let results = '<h4>Pruebas de JSON:</h4>';
+
+            const testObjects = [
+                { parameter: 'useFuenteDC', value: true },
+                { parameter: 'Usar Fuente DC', value: true },
+                { título: 'Configuración', parámetro: 'useFuenteDC' },
+                { message: 'Configurando parámetro...' }
+            ];
+
+            testObjects.forEach((obj, index) => {
+                try {
+                    const jsonString = JSON.stringify(obj);
+                    results += `✅ JSON.stringify(obj${index + 1}) = ${jsonString}<br>`;
+                    
+                    const parsed = JSON.parse(jsonString);
+                    results += `✅ JSON.parse() restored object<br>`;
+                } catch (error) {
+                    results += `❌ JSON Error obj${index + 1}: ${error.message}<br>`;
+                    log(`JSON error: ${error.message}`, 'error');
+                }
+                results += '<hr style="margin: 5px 0;">';
+            });
+
+            container.innerHTML = results;
+        }
+
+        // Test 6: Sistema de notificaciones
+        function testNotificationStrings() {
+            const container = document.getElementById('notification-results');
+            let results = '<h4>Pruebas de Notificaciones:</h4>';
+
+            const notificationStrings = [
+                'Configurando Usar Fuente DC',
+                'useFuenteDC configurado',
+                'Error configurando parámetro',
+                'Parámetro aplicado exitosamente'
+            ];
+
+            notificationStrings.forEach(str => {
+                try {
+                    // Simular creación de ID de notificación
+                    const id = Date.now() + Math.random().toString(36).substr(2, 9);
+                    results += `✅ ID generado para "${str}": ${id}<br>`;
+
+                    // Simular template strings
+                    const template1 = `Configurando ${str}`;
+                    const template2 = `${str} aplicado exitosamente`;
+                    results += `✅ Template 1: "${template1}"<br>`;
+                    results += `✅ Template 2: "${template2}"<br>`;
+
+                } catch (error) {
+                    results += `❌ Notification Error "${str}": ${error.message}<br>`;
+                    log(`Notification error: ${str} - ${error.message}`, 'error');
+                }
+                results += '<hr style="margin: 5px 0;">';
+            });
+
+            container.innerHTML = results;
+        }
+
+        // Inicializar listener de errores al cargar
+        document.addEventListener('DOMContentLoaded', () => {
+            setupErrorListener();
+            log('Página de diagnóstico cargada', 'success');
+        });
+    </script>
+</body>
+</html>

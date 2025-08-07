@@ -61,15 +61,33 @@
         <p>ESP32 Solar Charger Control Panel v1.0.0</p>
       </div>
     </footer>
+
+    <!-- Global Notifications -->
+    <GlobalNotification
+      v-if="notificationStore.currentNotification"
+      :visible="notificationStore.currentNotification.visible"
+      :type="notificationStore.currentNotification.type"
+      :title="notificationStore.currentNotification.title"
+      :message="notificationStore.currentNotification.message"
+      :auto-close="notificationStore.currentNotification.autoClose"
+      :duration="notificationStore.currentNotification.duration"
+      :show-progress="notificationStore.currentNotification.showProgress"
+      :progress="notificationStore.currentNotification.progress"
+      :progress-text="notificationStore.currentNotification.progressText"
+      @close="notificationStore.closeNotification(notificationStore.currentNotification.id)"
+    />
   </div>
 </template>
 
 <script setup>
 import ConnectionStatus from '@/components/ConnectionStatus.vue'
+import GlobalNotification from '@/components/GlobalNotification.vue'
 import { onMounted } from 'vue'
 import { useDataStore } from '@/stores/dataStore'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 const dataStore = useDataStore()
+const notificationStore = useNotificationStore()
 
 onMounted(() => {
   // Iniciar polling de datos

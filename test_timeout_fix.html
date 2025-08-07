@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Aplicar Configuración - Timeout Corregido</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f0f8ff; 
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .test-item { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: #f8f9fa; 
+            border-radius: 4px; 
+            border-left: 4px solid #007bff; 
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        .info { border-left-color: #17a2b8; background: #d1ecf1; }
+        .loading { border-left-color: #6f42c1; background: #e2d9f3; }
+        
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { 
+            background: #6c757d; 
+            cursor: not-allowed; 
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            overflow-x: auto; 
+            white-space: pre-wrap;
+        }
+        
+        .timer {
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Aplicar Configuración - Timeout Corregido</h1>
+        <p>Esta página prueba específicamente el problema de timeout al aplicar configuraciones.</p>
+        
+        <div class="test-item info">
+            <h3>📊 Estado del Sistema</h3>
+            <div id="system-status">Verificando...</div>
+        </div>
+        
+        <div class="test-item">
+            <h3>⚙️ Configuraciones Disponibles</h3>
+            <div id="available-configs">Cargando...</div>
+        </div>
+        
+        <div class="test-item">
+            <h3>🚀 Test de Aplicación</h3>
+            <p>Timeout configurado: <strong>30 segundos</strong> (antes: 10s)</p>
+            <button id="apply-btn" onclick="testApplyConfiguration()">
+                Aplicar BateriaLitio200Ah
+            </button>
+            <button onclick="testApplyWithProgress()">
+                Aplicar con Progreso Visual
+            </button>
+            
+            <div id="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="timer" id="timer">0s</div>
+            </div>
+            
+            <div id="apply-result"></div>
+        </div>
+        
+        <div class="test-item">
+            <h3>📋 Respuesta Detallada</h3>
+            <pre id="detailed-response">Esperando aplicación...</pre>
+        </div>
+        
+        <div class="test-item">
+            <h3>📊 Estadísticas de la Prueba</h3>
+            <div id="test-stats"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let startTime = null;
+        let timerInterval = null;
+        
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                document.getElementById('system-status').innerHTML = `
+                    <div class="success">✅ Backend disponible</div>
+                    <div>Respuesta: ${JSON.stringify(data)}</div>
+                `;
+            } catch (error) {
+                document.getElementById('system-status').innerHTML = `
+                    <div class="error">❌ Backend no disponible: ${error.message}</div>
+                `;
+            }
+        }
+        
+        async function loadConfigurations() {
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations`);
+                const data = await response.json();
+                
+                const configNames = Object.keys(data.configurations || {});
+                
+                document.getElementById('available-configs').innerHTML = `
+                    <div class="success">✅ ${configNames.length} configuraciones encontradas:</div>
+                    <ul>
+                        ${configNames.map(name => `<li><strong>${name}</strong></li>`).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                document.getElementById('available-configs').innerHTML = `
+                    <div class="error">❌ Error cargando configuraciones: ${error.message}</div>
+                `;
+            }
+        }
+        
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                const timerEl = document.getElementById('timer');
+                if (timerEl) {
+                    timerEl.textContent = `${elapsed}s`;
+                }
+            }, 100);
+        }
+        
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+        
+        function updateProgress(percent) {
+            const progressFill = document.getElementById('progress-fill');
+            if (progressFill) {
+                progressFill.style.width = `${percent}%`;
+            }
+        }
+        
+        async function testApplyConfiguration() {
+            const button = document.getElementById('apply-btn');
+            const resultDiv = document.getElementById('apply-result');
+            const responseDiv = document.getElementById('detailed-response');
+            
+            button.disabled = true;
+            button.textContent = 'Aplicando... (máx 30s)';
+            
+            resultDiv.innerHTML = '<div class="loading">🔄 Enviando solicitud...</div>';
+            responseDiv.textContent = 'Esperando respuesta...';
+            
+            startTimer();
+            const requestStart = Date.now();
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations/BateriaLitio200Ah/apply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const requestTime = ((Date.now() - requestStart) / 1000).toFixed(2);
+                const data = await response.json();
+                
+                stopTimer();
+                
+                if (response.ok) {
+                    if (data.status === 'success') {
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                ✅ Configuración aplicada exitosamente en ${requestTime}s
+                            </div>
+                        `;
+                    } else if (data.status === 'partial_success') {
+                        const summary = data.summary || {};
+                        resultDiv.innerHTML = `
+                            <div class="warning">
+                                ⚠️ Aplicación parcial en ${requestTime}s<br>
+                                Éxito: ${summary.applied_successfully || 0}/${summary.total_parameters || 0} parámetros
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="success">
+                                ✅ Operación completada en ${requestTime}s
+                            </div>
+                        `;
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Error HTTP ${response.status} en ${requestTime}s
+                        </div>
+                    `;
+                }
+                
+                responseDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Estadísticas
+                updateTestStats(requestTime, response.ok, data);
+                
+            } catch (error) {
+                const requestTime = ((Date.now() - requestStart) / 1000).toFixed(2);
+                stopTimer();
+                
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error: ${error.message} (${requestTime}s)
+                    </div>
+                `;
+                responseDiv.textContent = `Error: ${error.message}`;
+                
+                updateTestStats(requestTime, false, null, error.message);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Aplicar BateriaLitio200Ah';
+            }
+        }
+        
+        async function testApplyWithProgress() {
+            const progressContainer = document.getElementById('progress-container');
+            const resultDiv = document.getElementById('apply-result');
+            
+            progressContainer.style.display = 'block';
+            updateProgress(0);
+            
+            resultDiv.innerHTML = '<div class="loading">🚀 Aplicando con progreso visual...</div>';
+            
+            startTimer();
+            
+            // Simular progreso durante la operación
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress > 90) progress = 90; // No llegar al 100% hasta completar
+                updateProgress(progress);
+            }, 500);
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations/BateriaLitio200Ah/apply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                clearInterval(progressInterval);
+                updateProgress(100);
+                stopTimer();
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ Configuración aplicada con progreso visual
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ Error con progreso visual
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('detailed-response').textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                clearInterval(progressInterval);
+                stopTimer();
+                updateProgress(0);
+                
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ Error con progreso: ${error.message}
+                    </div>
+                `;
+            } finally {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+            }
+        }
+        
+        function updateTestStats(time, success, data, errorMsg) {
+            const statsDiv = document.getElementById('test-stats');
+            
+            const stats = {
+                'Tiempo de respuesta': `${time}s`,
+                'Estado': success ? '✅ Éxito' : '❌ Error',
+                'Timeout configurado': '30s (antes: 10s)',
+                'Mejora': time > 10 ? '⚠️ Habría fallado antes' : '✅ Dentro del timeout anterior'
+            };
+            
+            if (data && data.summary) {
+                stats['Parámetros aplicados'] = `${data.summary.applied_successfully || 0}/${data.summary.total_parameters || 0}`;
+            }
+            
+            if (errorMsg) {
+                stats['Error'] = errorMsg;
+            }
+            
+            statsDiv.innerHTML = Object.entries(stats)
+                .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                .join('');
+        }
+        
+        // Inicializar al cargar
+        window.addEventListener('load', () => {
+            checkSystemStatus();
+            loadConfigurations();
+        });
+    </script>
+</body>
+</html>

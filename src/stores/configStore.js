@@ -48,8 +48,19 @@ export const useConfigStore = defineStore('config', () => {
       
       return response
     } catch (err) {
-      error.value = err.message
-      throw err
+      // Mejorar el manejo de errores específicos
+      let errorMessage = err.message
+      
+      if (err.message.includes('timeout')) {
+        errorMessage = `Timeout configurando ${parameter} en ESP32 (esperó 8.0s). El dispositivo puede estar ocupado con otra operación.`
+      } else if (err.message.includes('lock')) {
+        errorMessage = `ESP32 ocupado configurando otro parámetro. Esperó el lock por ${err.message.match(/\d+\.?\d*/)?.[0] || '8.0'}s.`
+      } else if (err.response?.status === 422) {
+        errorMessage = `Valor inválido para ${parameter}: ${err.response?.data?.detail || 'Verifica el rango permitido'}`
+      }
+      
+      error.value = errorMessage
+      throw new Error(errorMessage)
     } finally {
       loading.value = false
     }

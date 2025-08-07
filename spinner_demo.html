@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔄 Demostración de Spinners Mejorados</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .demo-section {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f9fafb;
+        }
+        .demo-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .spinner-demo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
+        .button-demo {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .demo-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .demo-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        
+        /* Spinner CSS */
+        .spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinner-xs { width: 12px; height: 12px; }
+        .spinner-sm { width: 16px; height: 16px; }
+        .spinner-md { width: 20px; height: 20px; }
+        .spinner-lg { width: 24px; height: 24px; }
+        .spinner-xl { width: 32px; height: 32px; }
+        
+        .parameter-demo {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+        }
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .overlay-content {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid #3b82f6;
+        }
+        
+        .notification-demo {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 320px;
+            background: white;
+            border-left: 4px solid #8b5cf6;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            padding: 16px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .notification-demo.show {
+            transform: translateX(0);
+        }
+        
+        .grid-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .card-demo {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; color: #1f2937; margin-bottom: 30px;">
+            🔄 Sistema de Spinners Mejorado - ESP32 Solar Charger
+        </h1>
+        
+        <div class="demo-section">
+            <div class="demo-title">
+                ⚙️ Spinners para Parámetros Individuales
+            </div>
+            <p style="color: #6b7280; margin-bottom: 20px;">
+                Cuando cambias un parámetro como "Capacidad de Batería" o "Usar Fuente DC"
+            </p>
+            
+            <div class="parameter-demo">
+                <h4 style="margin: 0 0 10px 0; color: #374151;">Capacidad de Batería</h4>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" value="100" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 100px;">
+                    <span style="color: #6b7280;">Ah</span>
+                    <button class="demo-button btn-primary" onclick="simulateParameterSave(this)">
+                        💾 Guardar
+                    </button>
+                </div>
+                <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">
+                    Voltaje de flotación: 13.8V
+                </p>
+            </div>
+            
+            <div class="parameter-demo">
+                <h4 style="margin: 0 0 10px 0; color: #374151;">Usar Fuente DC</h4>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" style="transform: scale(1.2);">
+                        <span>Activar fuente DC adicional</span>
+                    </label>
+                    <button class="demo-button btn-primary" onclick="simulateParameterSave(this)">
+                        💾 Guardar
+                    </button>
+                </div>
+                <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">
+                    Activar si usas fuente DC además del panel solar
+                </p>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">
+                🚀 Spinners para Configuraciones Completas
+            </div>
+            <p style="color: #6b7280; margin-bottom: 20px;">
+                Cuando aplicas una configuración completa guardada
+            </p>
+            
+            <div class="grid-demo">
+                <div class="card-demo">
+                    <h5 style="margin: 0 0 8px 0; color: #1f2937;">BateriaLitio200Ah</h5>
+                    <p style="margin: 0 0 12px 0; font-size: 12px; color: #6b7280;">
+                        Creada: 06/08/2025 • Litio: Sí • DC: Activa
+                    </p>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="demo-button btn-success" onclick="simulateConfigApply(this)">
+                            🚀 Aplicar
+                        </button>
+                        <button class="demo-button btn-warning">
+                            ✏️ Editar
+                        </button>
+                        <button class="demo-button btn-danger">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-demo">
+                    <h5 style="margin: 0 0 8px 0; color: #1f2937;">BateriaGEL100Ah</h5>
+                    <p style="margin: 0 0 12px 0; font-size: 12px; color: #6b7280;">
+                        Creada: 05/08/2025 • GEL: Sí • DC: Inactiva
+                    </p>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="demo-button btn-success" onclick="simulateConfigApply(this)">
+                            🚀 Aplicar
+                        </button>
+                        <button class="demo-button btn-warning">
+                            ✏️ Editar
+                        </button>
+                        <button class="demo-button btn-danger">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">
+                🔔 Notificaciones con Spinner
+            </div>
+            <p style="color: #6b7280; margin-bottom: 20px;">
+                Sistema de notificaciones mejorado con spinners animados
+            </p>
+            
+            <div class="button-demo">
+                <button class="demo-button btn-primary" onclick="showLoadingNotification()">
+                    🔄 Mostrar Cargando
+                </button>
+                <button class="demo-button btn-success" onclick="showSuccessNotification()">
+                    ✅ Mostrar Éxito
+                </button>
+                <button class="demo-button btn-warning" onclick="showWarningNotification()">
+                    ⚠️ Mostrar Advertencia
+                </button>
+                <button class="demo-button btn-danger" onclick="showErrorNotification()">
+                    ❌ Mostrar Error
+                </button>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">
+                🎨 Galería de Spinners
+            </div>
+            <p style="color: #6b7280; margin-bottom: 20px;">
+                Diferentes tamaños y colores de spinners disponibles
+            </p>
+            
+            <div class="spinner-demo">
+                <span style="font-weight: 500; color: #374151; min-width: 80px;">Extra Small:</span>
+                <svg class="spinner spinner-xs" style="color: #3b82f6;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span style="color: #6b7280; font-size: 12px;">Para elementos pequeños</span>
+            </div>
+            
+            <div class="spinner-demo">
+                <span style="font-weight: 500; color: #374151; min-width: 80px;">Small:</span>
+                <svg class="spinner spinner-sm" style="color: #10b981;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span style="color: #6b7280; font-size: 12px;">Para botones y parámetros</span>
+            </div>
+            
+            <div class="spinner-demo">
+                <span style="font-weight: 500; color: #374151; min-width: 80px;">Medium:</span>
+                <svg class="spinner spinner-md" style="color: #f59e0b;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span style="color: #6b7280; font-size: 12px;">Para notificaciones</span>
+            </div>
+            
+            <div class="spinner-demo">
+                <span style="font-weight: 500; color: #374151; min-width: 80px;">Large:</span>
+                <svg class="spinner spinner-lg" style="color: #ef4444;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span style="color: #6b7280; font-size: 12px;">Para overlays</span>
+            </div>
+            
+            <div class="spinner-demo">
+                <span style="font-weight: 500; color: #374151; min-width: 80px;">Extra Large:</span>
+                <svg class="spinner spinner-xl" style="color: #8b5cf6;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span style="color: #6b7280; font-size: 12px;">Para cargas principales</span>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="demo-title">
+                📋 Estado de Implementación
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+                <div style="padding: 12px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #166534;">✅ ParameterInput.vue</div>
+                    <div style="font-size: 12px; color: #166534; margin-top: 4px;">Spinner SVG + overlay mejorado</div>
+                </div>
+                <div style="padding: 12px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #166534;">✅ ConfigurationManager.vue</div>
+                    <div style="font-size: 12px; color: #166534; margin-top: 4px;">Botones con spinner profesional</div>
+                </div>
+                <div style="padding: 12px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #166534;">✅ GlobalNotification.vue</div>
+                    <div style="font-size: 12px; color: #166534; margin-top: 4px;">Spinner animado para loading</div>
+                </div>
+                <div style="padding: 12px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #166534;">✅ LoadingSpinner.vue</div>
+                    <div style="font-size: 12px; color: #166534; margin-top: 4px;">Componente reutilizable</div>
+                </div>
+                <div style="padding: 12px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #166534;">✅ AppButton.vue</div>
+                    <div style="font-size: 12px; color: #166534; margin-top: 4px;">Botón con spinner integrado</div>
+                </div>
+                <div style="padding: 12px; background: #dbeafe; border: 1px solid #3b82f6; border-radius: 6px;">
+                    <div style="font-weight: 500; color: #1e40af;">🔧 DOMException</div>
+                    <div style="font-size: 12px; color: #1e40af; margin-top: 4px;">Error de caracteres corregido</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificación flotante -->
+    <div id="notification" class="notification-demo">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div id="notification-icon">🔄</div>
+            <div>
+                <div id="notification-title" style="font-weight: 500; color: #1f2937; margin-bottom: 2px;">
+                    Configurando parámetro
+                </div>
+                <div id="notification-message" style="font-size: 12px; color: #6b7280;">
+                    Enviando al ESP32... (hasta 15s)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let notificationTimeout;
+
+        function simulateParameterSave(button) {
+            // Obtener el parámetro parent
+            const parameterDemo = button.closest('.parameter-demo');
+            const parameterName = parameterDemo.querySelector('h4').textContent;
+            
+            // Crear overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.innerHTML = `
+                <div class="overlay-content">
+                    <svg class="spinner spinner-md" style="color: #3b82f6;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span style="font-weight: 500; color: #1f2937;">Configurando ${parameterName}...</span>
+                </div>
+            `;
+            
+            // Actualizar botón
+            const originalContent = button.innerHTML;
+            button.innerHTML = `
+                <svg class="spinner spinner-sm" style="color: white;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Aplicando... (hasta 15s)
+            `;
+            button.disabled = true;
+            
+            // Añadir overlay
+            parameterDemo.appendChild(overlay);
+            
+            // Mostrar notificación
+            showCustomNotification(
+                'Configurando ' + parameterName,
+                'Enviando al ESP32... (hasta 15s)',
+                'loading'
+            );
+            
+            // Simular delay
+            setTimeout(() => {
+                // Remover overlay
+                overlay.remove();
+                
+                // Restaurar botón
+                button.innerHTML = originalContent;
+                button.disabled = false;
+                
+                // Mostrar éxito
+                showCustomNotification(
+                    parameterName + ' configurado',
+                    'Parámetro aplicado exitosamente',
+                    'success'
+                );
+            }, 3000);
+        }
+
+        function simulateConfigApply(button) {
+            const configName = button.closest('.card-demo').querySelector('h5').textContent;
+            
+            // Actualizar botón
+            const originalContent = button.innerHTML;
+            button.innerHTML = `
+                <svg class="spinner spinner-sm" style="color: white;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Aplicando... (hasta 30s)
+            `;
+            button.disabled = true;
+            
+            // Mostrar notificación
+            showCustomNotification(
+                'Aplicando ' + configName,
+                'Configurando todos los parámetros... (hasta 30s)',
+                'loading'
+            );
+            
+            // Simular delay más largo para configuración completa
+            setTimeout(() => {
+                // Restaurar botón
+                button.innerHTML = originalContent;
+                button.disabled = false;
+                
+                // Mostrar éxito
+                showCustomNotification(
+                    'Configuración aplicada',
+                    configName + ' se aplicó exitosamente',
+                    'success'
+                );
+            }, 4000);
+        }
+
+        function showCustomNotification(title, message, type) {
+            const notification = document.getElementById('notification');
+            const titleEl = document.getElementById('notification-title');
+            const messageEl = document.getElementById('notification-message');
+            const iconEl = document.getElementById('notification-icon');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            // Configurar icono según tipo
+            if (type === 'loading') {
+                iconEl.innerHTML = `
+                    <svg class="spinner spinner-md" style="color: #8b5cf6;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                `;
+                notification.style.borderLeftColor = '#8b5cf6';
+            } else if (type === 'success') {
+                iconEl.textContent = '✅';
+                notification.style.borderLeftColor = '#10b981';
+            } else if (type === 'warning') {
+                iconEl.textContent = '⚠️';
+                notification.style.borderLeftColor = '#f59e0b';
+            } else if (type === 'error') {
+                iconEl.textContent = '❌';
+                notification.style.borderLeftColor = '#ef4444';
+            }
+            
+            // Mostrar notificación
+            notification.classList.add('show');
+            
+            // Auto-ocultar después de un tiempo (excepto loading)
+            clearTimeout(notificationTimeout);
+            if (type !== 'loading') {
+                notificationTimeout = setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            } else {
+                // Loading se oculta manualmente
+                notificationTimeout = setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 8000);
+            }
+        }
+
+        function showLoadingNotification() {
+            showCustomNotification(
+                'Configurando ESP32',
+                'Enviando parámetros... (hasta 15s)',
+                'loading'
+            );
+        }
+
+        function showSuccessNotification() {
+            showCustomNotification(
+                'Configuración exitosa',
+                'Parámetro aplicado correctamente',
+                'success'
+            );
+        }
+
+        function showWarningNotification() {
+            showCustomNotification(
+                'Timeout configurando',
+                'El ESP32 puede estar ocupado. Intenta nuevamente.',
+                'warning'
+            );
+        }
+
+        function showErrorNotification() {
+            showCustomNotification(
+                'Error de configuración',
+                'Verifica la conexión y el valor ingresado',
+                'error'
+            );
+        }
+
+        // Mostrar notificación de bienvenida
+        setTimeout(() => {
+            showSuccessNotification();
+        }, 1000);
+    </script>
+</body>
+</html>

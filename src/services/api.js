@@ -24,6 +24,32 @@ const apiClient = axios.create({
   }
 })
 
+// Interceptor para request - sanitizar datos antes de enviar
+apiClient.interceptors.request.use(
+  config => {
+    if (DEBUG_MODE) {
+      console.log('📤 API Request:', config.method?.toUpperCase(), config.url)
+    }
+    
+    // Sanitizar datos del body para evitar problemas de codificación
+    if (config.data && typeof config.data === 'object') {
+      try {
+        config.data = JSON.parse(JSON.stringify(config.data))
+      } catch (error) {
+        console.warn('Error sanitizing request data:', error)
+      }
+    }
+    
+    return config
+  },
+  error => {
+    if (DEBUG_MODE) {
+      console.error('❌ API Request Error:', error.message)
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Interceptor para manejo de errores
 apiClient.interceptors.response.use(
   response => {
