@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Configuración desde variables de entorno
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.13.180:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000
 const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true'
 
@@ -51,7 +51,8 @@ export const api = {
 
   async getParameter(parameter) {
     const response = await apiClient.get(`/data/`)
-    return response.data
+    // Extraer el parámetro específico de la respuesta completa
+    return response.data[parameter]
   },
 
   // Configuración
@@ -77,17 +78,30 @@ export const api = {
 
   // Acciones
   async toggleLoad(hours, minutes, seconds) {
-    const response = await apiClient.post('/actions/toggle_load', {
-      hours,
-      minutes,
-      seconds
-    })
-    return response.data
+    // NOTA: Según la documentación, este endpoint puede no existir
+    // Verificar si está disponible en la nueva API
+    try {
+      const response = await apiClient.post('/actions/toggle_load', {
+        hours,
+        minutes,
+        seconds
+      })
+      return response.data
+    } catch (error) {
+      console.warn('Endpoint /actions/toggle_load no disponible en la nueva API')
+      throw error
+    }
   },
 
   async getActionsStatus() {
-    const response = await apiClient.get('/actions/status')
-    return response.data
+    // Usar el endpoint de datos general que incluye información de estado
+    const response = await apiClient.get('/data/')
+    return {
+      load_control_state: response.data.loadControlState,
+      temporary_load_off: response.data.temporaryLoadOff,
+      load_off_remaining_seconds: response.data.loadOffRemainingSeconds,
+      load_off_duration: response.data.loadOffDuration
+    }
   },
 
   // Estado
@@ -175,6 +189,19 @@ export const api = {
 
   async validateConfiguration(configData) {
     const response = await apiClient.post('/config/custom/configurations/validate', configData)
+    return response.data
+  },
+
+  // Nuevos métodos según la documentación actualizada
+  async searchConfigurations(searchTerm) {
+    const params = searchTerm ? { search: searchTerm } : {}
+    const response = await apiClient.get('/config/custom/configurations', { params })
+    return response.data
+  },
+
+  async importConfigurations(configData) {
+    // Método para importar configuraciones (si está disponible en la API)
+    const response = await apiClient.post('/config/custom/configurations/import', configData)
     return response.data
   }
 }

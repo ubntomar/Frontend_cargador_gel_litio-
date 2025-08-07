@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Configuration Changes</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+        }
+        .btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .btn:hover { background: #0056b3; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test de Configuración de Parámetros</h1>
+        
+        <div class="test-section">
+            <h3>📊 Datos Actuales</h3>
+            <button class="btn" onclick="getCurrentData()">Obtener Datos Actuales</button>
+            <div id="current-data"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ Test de Modificación de Parámetros</h3>
+            <button class="btn" onclick="testBatteryCapacity()">Test batteryCapacity</button>
+            <button class="btn" onclick="testBulkVoltage()">Test bulkVoltage</button>
+            <button class="btn" onclick="testIsLithium()">Test isLithium</button>
+            <div id="parameter-test"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test de Validación (Problemático)</h3>
+            <button class="btn" onclick="testValidationSingle()">Test Validación 1 Parámetro</button>
+            <button class="btn" onclick="testValidationComplete()">Test Validación Completa</button>
+            <div id="validation-test"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Logs del Sistema</h3>
+            <button class="btn" onclick="clearLogs()">Limpiar Logs</button>
+            <div id="system-logs"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info', containerId = 'system-logs') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('system-logs').innerHTML = '';
+            document.getElementById('current-data').innerHTML = '';
+            document.getElementById('parameter-test').innerHTML = '';
+            document.getElementById('validation-test').innerHTML = '';
+        }
+
+        async function getCurrentData() {
+            try {
+                const response = await fetch('/api/data/');
+                const data = await response.json();
+                
+                const html = `
+                    <div class="success">✅ Datos obtenidos exitosamente</div>
+                    <pre>${JSON.stringify({
+                        batteryCapacity: data.batteryCapacity,
+                        isLithium: data.isLithium,
+                        bulkVoltage: data.bulkVoltage,
+                        absorptionVoltage: data.absorptionVoltage,
+                        floatVoltage: data.floatVoltage,
+                        thresholdPercentage: data.thresholdPercentage,
+                        maxAllowedCurrent: data.maxAllowedCurrent,
+                        useFuenteDC: data.useFuenteDC,
+                        fuenteDC_Amps: data.fuenteDC_Amps,
+                        factorDivider: data.factorDivider
+                    }, null, 2)}</pre>
+                `;
+                
+                document.getElementById('current-data').innerHTML = html;
+                log('✅ Datos actuales obtenidos', 'success');
+            } catch (error) {
+                document.getElementById('current-data').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                log(`❌ Error obteniendo datos: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBatteryCapacity() {
+            try {
+                const response = await fetch('/api/config/parameter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parameter: 'batteryCapacity', value: 100 })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('parameter-test').innerHTML = `<div class="success">✅ batteryCapacity actualizado exitosamente</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log('✅ batteryCapacity actualizado', 'success');
+                } else {
+                    document.getElementById('parameter-test').innerHTML = `<div class="error">❌ Error actualizando batteryCapacity</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log(`❌ Error actualizando batteryCapacity: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('parameter-test').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                log(`❌ Error en test batteryCapacity: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBulkVoltage() {
+            try {
+                const response = await fetch('/api/config/parameter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parameter: 'bulkVoltage', value: 14.4 })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('parameter-test').innerHTML = `<div class="success">✅ bulkVoltage actualizado exitosamente</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log('✅ bulkVoltage actualizado', 'success');
+                } else {
+                    document.getElementById('parameter-test').innerHTML = `<div class="error">❌ Error actualizando bulkVoltage</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log(`❌ Error actualizando bulkVoltage: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('parameter-test').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                log(`❌ Error en test bulkVoltage: ${error.message}`, 'error');
+            }
+        }
+
+        async function testIsLithium() {
+            try {
+                const response = await fetch('/api/config/parameter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parameter: 'isLithium', value: false })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('parameter-test').innerHTML = `<div class="success">✅ isLithium actualizado exitosamente</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log('✅ isLithium actualizado', 'success');
+                } else {
+                    document.getElementById('parameter-test').innerHTML = `<div class="error">❌ Error actualizando isLithium</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log(`❌ Error actualizando isLithium: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('parameter-test').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                log(`❌ Error en test isLithium: ${error.message}`, 'error');
+            }
+        }
+
+        async function testValidationSingle() {
+            try {
+                const response = await fetch('/api/config/custom/configurations/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batteryCapacity: 100 })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('validation-test').innerHTML = `<div class="success">✅ Validación de un parámetro exitosa</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log('✅ Validación de un parámetro exitosa', 'success');
+                } else {
+                    document.getElementById('validation-test').innerHTML = `<div class="error">❌ Error en validación de un parámetro (ESPERADO)</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log(`❌ Error en validación single: ${response.status} (ESPERADO)`, 'warning');
+                }
+            } catch (error) {
+                document.getElementById('validation-test').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                log(`❌ Error en test validación: ${error.message}`, 'error');
+            }
+        }
+
+        async function testValidationComplete() {
+            try {
+                // Primero obtener datos actuales
+                const dataResponse = await fetch('/api/data/');
+                const currentData = await dataResponse.json();
+                
+                const completeConfig = {
+                    batteryCapacity: currentData.batteryCapacity,
+                    isLithium: currentData.isLithium,
+                    thresholdPercentage: currentData.thresholdPercentage,
+                    maxAllowedCurrent: currentData.maxAllowedCurrent,
+                    bulkVoltage: currentData.bulkVoltage,
+                    absorptionVoltage: currentData.absorptionVoltage,
+                    floatVoltage: currentData.floatVoltage,
+                    useFuenteDC: currentData.useFuenteDC,
+                    fuenteDC_Amps: currentData.fuenteDC_Amps,
+                    factorDivider: currentData.factorDivider
+                };
+                
+                const response = await fetch('/api/config/custom/configurations/validate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(completeConfig)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('validation-test').innerHTML = `<div class="success">✅ Validación completa exitosa</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log('✅ Validación completa exitosa', 'success');
+                } else {
+                    document.getElementById('validation-test').innerHTML = `<div class="error">❌ Error en validación completa</div><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    log(`❌ Error en validación completa: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('validation-test').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                log(`❌ Error en test validación completa: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run initial test
+        window.addEventListener('load', () => {
+            setTimeout(getCurrentData, 500);
+        });
+    </script>
+</body>
+</html>

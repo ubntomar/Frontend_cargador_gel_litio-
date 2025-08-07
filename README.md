@@ -2,6 +2,28 @@
 
 Frontend en Vue 3 para el control y monitoreo del cargador solar ESP32.
 
+## 🎯 **ACTUALIZACIÓN IMPORTANTE - Versión API 1.0.0**
+
+Este frontend ha sido **completamente actualizado** para ser compatible con la nueva versión de la API. Los principales cambios incluyen:
+
+### ✅ **Cambios Implementados:**
+
+1. **📡 URL Base Actualizada**: Cambiada de `192.168.13.180:8000` a `localhost:8000` según documentación
+2. **🔄 Polling Optimizado**: Reducido de 5 segundos a 3 segundos (recomendación API)
+3. **📊 Nuevos Campos de Datos**: Agregados campos como `netCurrent`, `accumulatedAh`, `firmware_version`, etc.
+4. **🔍 Búsqueda de Configuraciones**: Implementada búsqueda en configuraciones personalizadas
+5. **✅ Validación Mejorada**: Integrada validación de la API para parámetros
+6. **🔗 Estado de Conexión Avanzado**: Diferenciación entre estado API y ESP32
+7. **📋 Endpoints Actualizados**: Corregidos endpoints obsoletos y agregados nuevos
+
+### 📚 **Documentación API Incluida:**
+
+- `API-DOCS/FRONTEND_EXECUTIVE_SUMMARY.md` - Resumen ejecutivo
+- `API-DOCS/FRONTEND_API_DOCUMENTATION.md` - Documentación completa
+- `API-DOCS/FRONTEND_EXAMPLES.md` - Ejemplos prácticos
+
+---
+
 ## 🚀 Instalación Rápida
 
 ```bash
@@ -34,7 +56,10 @@ El proyecto usa archivos `.env` para manejar la configuración de manera flexibl
 
 ```bash
 # URL de la API del Orange Pi
-VITE_API_BASE_URL=http://192.168.13.180:8000
+# IMPORTANTE: Actualizada según nueva documentación
+VITE_API_BASE_URL=http://localhost:8000
+# Para producción, usar la IP real:
+# VITE_API_BASE_URL=http://192.168.13.180:8000
 
 # Puerto del servidor de desarrollo
 VITE_DEV_PORT=5173
@@ -46,8 +71,11 @@ VITE_APP_VERSION=1.0.0
 # Timeout de las peticiones API (milisegundos)
 VITE_API_TIMEOUT=10000
 
+# Intervalo de polling (ACTUALIZADO: ahora 3 segundos según API)
+VITE_POLLING_INTERVAL=3000
+
 # Modo debug (muestra logs adicionales)
-VITE_DEBUG_MODE=false
+VITE_DEBUG_MODE=true
 ```
 
 ### 🛠️ Configuración Inicial

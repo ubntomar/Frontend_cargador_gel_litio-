@@ -184,6 +184,16 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  async function searchConfigurations(searchTerm) {
+    try {
+      const response = await api.searchConfigurations(searchTerm)
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
   return {
     configurableParameters,
     savedConfigurations,
@@ -198,6 +208,7 @@ export const useConfigStore = defineStore('config', () => {
     getCurrentConfiguration,
     validateConfiguration,
     exportConfigurations,
-    getConfigurationInfo
+    getConfigurationInfo,
+    searchConfigurations
   }
 })

@@ -12,6 +12,22 @@
       </button>
     </div>
 
+    <!-- Advertencia sobre compatibilidad API -->
+    <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <span class="text-yellow-400">⚠️</span>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">Nota sobre Compatibilidad</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p>Algunos endpoints de control pueden no estar disponibles en la nueva versión de la API. 
+            Esta funcionalidad está adaptada para usar los datos disponibles del endpoint principal <code>/data/</code>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="space-y-6">
       <!-- Current Status -->
       <div class="bg-white rounded-lg shadow p-6">

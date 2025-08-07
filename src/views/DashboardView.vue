@@ -132,6 +132,61 @@
           <p class="text-xl font-semibold">{{ data.factorDivider }}</p>
         </div>
       </div>
+
+      <!-- Nueva sección: Información del Sistema -->
+      <div v-if="data" class="bg-gray-50 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Información del Sistema</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Estado de Conexión</p>
+            <p class="text-xl font-semibold" :class="data.connected ? 'text-green-600' : 'text-red-600'">
+              {{ data.connected ? '🟢 Conectado' : '🔴 Desconectado' }}
+            </p>
+          </div>
+
+          <div v-if="data.firmware_version" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Versión Firmware</p>
+            <p class="text-xl font-semibold">{{ data.firmware_version }}</p>
+          </div>
+
+          <div v-if="data.uptime" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Tiempo Encendido</p>
+            <p class="text-xl font-semibold">{{ formatUptime(data.uptime) }}</p>
+          </div>
+
+          <div v-if="data.last_update" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Última Actualización</p>
+            <p class="text-sm font-semibold">{{ formatLastUpdate(data.last_update) }}</p>
+          </div>
+        </div>
+
+        <!-- Información adicional de carga -->
+        <div v-if="data.accumulatedAh || data.netCurrent" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div v-if="data.accumulatedAh" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Ah Acumulados</p>
+            <p class="text-xl font-semibold text-blue-600">{{ data.accumulatedAh.toFixed(2) }} Ah</p>
+          </div>
+
+          <div v-if="data.netCurrent" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Corriente Neta</p>
+            <p class="text-xl font-semibold" :class="data.netCurrent >= 0 ? 'text-green-600' : 'text-red-600'">
+              {{ data.netCurrent.toFixed(1) }} mA
+            </p>
+          </div>
+
+          <div v-if="data.currentBulkHours" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">Horas BULK Actuales</p>
+            <p class="text-xl font-semibold">{{ data.currentBulkHours.toFixed(1) }} h</p>
+          </div>
+        </div>
+
+        <!-- Nota personalizada del sistema -->
+        <div v-if="data.notaPersonalizada" class="mt-4 bg-blue-100 rounded-lg p-4">
+          <p class="text-sm text-blue-800 font-medium">💡 Nota del Sistema:</p>
+          <p class="text-blue-700">{{ data.notaPersonalizada }}</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -160,4 +215,28 @@ const energySourceType = computed(() => {
   if (!data.value) return 'Desconocido'
   return data.value.useFuenteDC ? 'Fuente DC' : 'Paneles Solares'
 })
+
+// Función para formatear el uptime
+const formatUptime = (uptimeSeconds) => {
+  const hours = Math.floor(uptimeSeconds / 3600)
+  const minutes = Math.floor((uptimeSeconds % 3600) / 60)
+  
+  if (hours > 24) {
+    const days = Math.floor(hours / 24)
+    return `${days}d ${hours % 24}h`
+  }
+  return `${hours}h ${minutes}m`
+}
+
+// Función para formatear la última actualización
+const formatLastUpdate = (lastUpdate) => {
+  const date = new Date(lastUpdate)
+  return date.toLocaleString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
 </script>

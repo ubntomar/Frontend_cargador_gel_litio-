@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Debug Console</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #1e1e1e; 
+            color: #d4d4d4; 
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { 
+            background: #2d2d30; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            border: 1px solid #3e3e42; 
+        }
+        .btn { 
+            background: #0e639c; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+        }
+        .btn:hover { background: #1177bb; }
+        .result { 
+            background: #1e1e1e; 
+            border: 1px solid #3e3e42; 
+            border-radius: 4px; 
+            padding: 15px; 
+            margin: 10px 0; 
+            white-space: pre-wrap; 
+        }
+        .success { border-left: 4px solid #107c10; }
+        .error { border-left: 4px solid #d13438; }
+        .warning { border-left: 4px solid #f9a825; }
+        h1, h2 { color: #ffffff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Frontend API Debug Console</h1>
+        
+        <div class="section">
+            <h2>📡 API Connectivity Tests</h2>
+            <button class="btn" onclick="testDirectAPI()">Test Direct API</button>
+            <button class="btn" onclick="testProxyAPI()">Test Proxy API</button>
+            <button class="btn" onclick="testHealthEndpoint()">Test Health</button>
+            <button class="btn" onclick="testConfigEndpoint()">Test Config</button>
+            <div id="api-results"></div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Frontend Integration Tests</h2>
+            <button class="btn" onclick="simulateVueDataStore()">Simulate Vue DataStore</button>
+            <button class="btn" onclick="simulateVueConfigStore()">Simulate Vue ConfigStore</button>
+            <button class="btn" onclick="testComponentDataFlow()">Test Component Flow</button>
+            <div id="integration-results"></div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Real-time Data Monitor</h2>
+            <button class="btn" onclick="startPolling()">Start Polling</button>
+            <button class="btn" onclick="stopPolling()">Stop Polling</button>
+            <div id="polling-results"></div>
+        </div>
+    </div>
+
+    <script>
+        let pollingInterval = null;
+        
+        function log(message, type = 'info', containerId = 'api-results') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function testDirectAPI() {
+            try {
+                const response = await fetch('http://localhost:8000/data/');
+                const data = await response.json();
+                log(`✅ Direct API Success:\\nSOC: ${data.estimatedSOC}%\\nVoltage: ${data.voltageBatterySensor2}V\\nState: ${data.chargeState}\\nConnected: ${data.connected}`, 'success');
+            } catch (error) {
+                log(`❌ Direct API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProxyAPI() {
+            try {
+                const response = await fetch('/api/data/');
+                const data = await response.json();
+                log(`✅ Proxy API Success:\\nSOC: ${data.estimatedSOC}%\\nVoltage: ${data.voltageBatterySensor2}V\\nState: ${data.chargeState}\\nConnected: ${data.connected}`, 'success');
+            } catch (error) {
+                log(`❌ Proxy API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHealthEndpoint() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                log(`✅ Health Check Success:\\nStatus: ${data.status}\\nESP32: ${data.esp32_connection?.connected}\\nTimestamp: ${data.timestamp}`, 'success');
+            } catch (error) {
+                log(`❌ Health Check Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testConfigEndpoint() {
+            try {
+                const response = await fetch('/api/config/custom/configurations');
+                const data = await response.json();
+                log(`✅ Config Endpoint Success:\\nConfigurations: ${data.total_count}\\nKeys: ${Object.keys(data.configurations || {}).join(', ')}`, 'success');
+            } catch (error) {
+                log(`❌ Config Endpoint Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateVueDataStore() {
+            log('🔄 Simulating Vue DataStore...', 'info', 'integration-results');
+            
+            const dataStore = {
+                data: null,
+                loading: false,
+                error: null,
+                connected: false,
+                
+                async fetchData() {
+                    this.loading = true;
+                    this.error = null;
+                    
+                    try {
+                        const response = await fetch('/api/data/');
+                        if (!response.ok) throw new Error(\`HTTP \${response.status}\`);
+                        
+                        this.data = await response.json();
+                        this.connected = this.data.connected;
+                        
+                        // Compute battery percentage
+                        const batteryPercentage = this.data.estimatedSOC || 0;
+                        
+                        // Compute charging power
+                        const chargingPower = (this.data.voltagePanel * this.data.panelToBatteryCurrent) / 1000;
+                        
+                        log(\`✅ DataStore Success:\\nBattery: \${batteryPercentage}%\\nCharging Power: \${chargingPower.toFixed(2)}W\\nTemperature: \${this.data.temperature}°C\`, 'success', 'integration-results');
+                        
+                        return this.data;
+                    } catch (error) {
+                        this.error = error.message;
+                        this.connected = false;
+                        log(\`❌ DataStore Error: \${error.message}\`, 'error', 'integration-results');
+                        throw error;
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            };
+            
+            await dataStore.fetchData();
+        }
+
+        async function simulateVueConfigStore() {
+            log('⚙️ Simulating Vue ConfigStore...', 'info', 'integration-results');
+            
+            const configStore = {
+                configurableParameters: {},
+                
+                async loadConfigurableParameters() {
+                    try {
+                        const response = await fetch('/api/data/');
+                        if (!response.ok) throw new Error(\`HTTP \${response.status}\`);
+                        
+                        const data = await response.json();
+                        
+                        this.configurableParameters = {
+                            batteryCapacity: { current_value: data.batteryCapacity },
+                            isLithium: { current_value: data.isLithium },
+                            thresholdPercentage: { current_value: data.thresholdPercentage },
+                            maxAllowedCurrent: { current_value: data.maxAllowedCurrent },
+                            bulkVoltage: { current_value: data.bulkVoltage },
+                            absorptionVoltage: { current_value: data.absorptionVoltage },
+                            floatVoltage: { current_value: data.floatVoltage }
+                        };
+                        
+                        log(\`✅ ConfigStore Success:\\nBattery: \${data.batteryCapacity}Ah \${data.isLithium ? 'Lithium' : 'GEL'}\\nVoltages: Bulk=\${data.bulkVoltage}V, Float=\${data.floatVoltage}V\`, 'success', 'integration-results');
+                        
+                        return this.configurableParameters;
+                    } catch (error) {
+                        log(\`❌ ConfigStore Error: \${error.message}\`, 'error', 'integration-results');
+                        throw error;
+                    }
+                }
+            };
+            
+            await configStore.loadConfigurableParameters();
+        }
+
+        async function testComponentDataFlow() {
+            log('🎯 Testing Component Data Flow...', 'info', 'integration-results');
+            
+            try {
+                // Simulate BatteryStatus component
+                const data = await (await fetch('/api/data/')).json();
+                
+                const batteryPercentage = data.estimatedSOC || 0;
+                const voltage = data.voltageBatterySensor2 || 0;
+                const current = data.panelToBatteryCurrent || 0;
+                const capacity = data.batteryCapacity || 0;
+                const batteryType = data.isLithium ? 'Litio' : 'GEL/AGM';
+                const chargeState = data.chargeState || 'UNKNOWN';
+                
+                log(\`✅ BatteryStatus Component Data:\\nPercentage: \${batteryPercentage}%\\nVoltage: \${voltage}V\\nCurrent: \${current}mA\\nCapacity: \${capacity}Ah\\nType: \${batteryType}\\nState: \${chargeState}\`, 'success', 'integration-results');
+                
+                // Simulate MetricCard calculations
+                const energySourceType = data.useFuenteDC ? 'Fuente DC' : 'Paneles Solares';
+                const sourceValue = data.useFuenteDC ? data.fuenteDC_Amps : data.voltagePanel;
+                const sourceUnit = data.useFuenteDC ? 'A' : 'V';
+                
+                log(\`✅ MetricCard Component Data:\\nSource: \${energySourceType}\\nValue: \${sourceValue}\${sourceUnit}\\nTemperature: \${data.temperature}°C\`, 'success', 'integration-results');
+                
+            } catch (error) {
+                log(\`❌ Component Flow Error: \${error.message}\`, 'error', 'integration-results');
+            }
+        }
+
+        function startPolling() {
+            if (pollingInterval) {
+                log('⚠️ Polling already running', 'warning', 'polling-results');
+                return;
+            }
+            
+            log('🚀 Starting polling every 3 seconds...', 'info', 'polling-results');
+            
+            let pollCount = 0;
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/data/');
+                    const data = await response.json();
+                    pollCount++;
+                    
+                    log(\`📊 Poll #\${pollCount}: SOC=\${data.estimatedSOC}%, V=\${data.voltageBatterySensor2}V, T=\${data.temperature}°C, State=\${data.chargeState}\`, 'success', 'polling-results');
+                } catch (error) {
+                    log(\`❌ Poll #\${pollCount} Error: \${error.message}\`, 'error', 'polling-results');
+                }
+            }, 3000);
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                log('🛑 Polling stopped', 'info', 'polling-results');
+            } else {
+                log('⚠️ No polling to stop', 'warning', 'polling-results');
+            }
+        }
+
+        // Auto-run initial tests
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testProxyAPI();
+                testHealthEndpoint();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

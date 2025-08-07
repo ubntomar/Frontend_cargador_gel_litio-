@@ -125,16 +125,25 @@ const hasChanges = computed(() => {
 })
 
 // Validar valor
-watch(localValue, (newValue) => {
+watch(localValue, async (newValue) => {
   error.value = ''
   
   if (props.type !== 'bool') {
     if (props.min !== null && newValue < props.min) {
       error.value = `Valor mínimo: ${props.min}`
+      return
     }
     if (props.max !== null && newValue > props.max) {
       error.value = `Valor máximo: ${props.max}`
+      return
     }
+  }
+
+  // Validación básica del valor
+  if (newValue !== originalValue.value && newValue !== null && newValue !== undefined) {
+    // Por ahora, omitir la validación avanzada para evitar errores 422
+    // La validación se hará en el momento de guardar el parámetro
+    // TODO: Implementar validación avanzada cuando todos los parámetros estén disponibles
   }
 })
 

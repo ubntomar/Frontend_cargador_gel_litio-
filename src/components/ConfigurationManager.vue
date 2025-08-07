@@ -26,7 +26,26 @@
 
     <!-- Lista de Configuraciones Guardadas -->
     <div v-if="Object.keys(savedConfigs).length > 0">
-      <h4 class="font-medium text-gray-900 mb-3">Configuraciones Guardadas</h4>
+      <div class="flex justify-between items-center mb-3">
+        <h4 class="font-medium text-gray-900">Configuraciones Guardadas</h4>
+        <!-- Campo de búsqueda -->
+        <div class="flex items-center gap-2">
+          <input
+            v-model="searchTerm"
+            type="text"
+            placeholder="Buscar configuraciones..."
+            class="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            @input="onSearch"
+          />
+          <button
+            v-if="searchTerm"
+            @click="clearSearch"
+            class="px-2 py-1 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
       <div class="space-y-3">
         <div
           v-for="(config, name) in savedConfigs"
@@ -153,12 +172,61 @@ const saving = ref(false)
 const applying = ref(null)
 const showDeleteModal = ref(false)
 const configToDelete = ref('')
+const searchTerm = ref('')
+const filteredConfigs = ref({})
 
-const savedConfigs = computed(() => configStore.savedConfigurations)
+const savedConfigs = computed(() => {
+  if (!searchTerm.value) {
+    return configStore.savedConfigurations
+  }
+  return filteredConfigs.value
+})
 
 onMounted(async () => {
   await configStore.loadSavedConfigurations()
 })
+
+// Función de búsqueda
+async function onSearch() {
+  if (!searchTerm.value.trim()) {
+    await configStore.loadSavedConfigurations()
+    return
+  }
+
+  try {
+    // Usar la nueva API de búsqueda si está disponible
+    const result = await configStore.searchConfigurations?.(searchTerm.value)
+    if (result && result.configurations) {
+      filteredConfigs.value = result.configurations
+    } else {
+      // Fallback: filtrar localmente
+      const allConfigs = configStore.savedConfigurations
+      const filtered = {}
+      for (const [name, config] of Object.entries(allConfigs)) {
+        if (name.toLowerCase().includes(searchTerm.value.toLowerCase())) {
+          filtered[name] = config
+        }
+      }
+      filteredConfigs.value = filtered
+    }
+  } catch (error) {
+    console.warn('Búsqueda avanzada no disponible, usando filtro local')
+    // Filtrar localmente como fallback
+    const allConfigs = configStore.savedConfigurations
+    const filtered = {}
+    for (const [name, config] of Object.entries(allConfigs)) {
+      if (name.toLowerCase().includes(searchTerm.value.toLowerCase())) {
+        filtered[name] = config
+      }
+    }
+    filteredConfigs.value = filtered
+  }
+}
+
+function clearSearch() {
+  searchTerm.value = ''
+  filteredConfigs.value = {}
+}
 
 async function saveCurrentConfiguration() {
   if (!newConfigName.value.trim()) return

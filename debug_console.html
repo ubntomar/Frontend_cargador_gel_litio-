@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API Test Console</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            margin: 20px; 
+            background: #1e1e1e; 
+            color: #d4d4d4; 
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .test-section { 
+            background: #2d2d30; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            border: 1px solid #3e3e42; 
+        }
+        .btn { 
+            background: #0e639c; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            margin: 5px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-family: inherit;
+        }
+        .btn:hover { background: #1177bb; }
+        .btn.success { background: #107c10; }
+        .btn.error { background: #d13438; }
+        .result { 
+            background: #1e1e1e; 
+            border: 1px solid #3e3e42; 
+            border-radius: 4px; 
+            padding: 15px; 
+            margin: 10px 0; 
+            white-space: pre-wrap; 
+            overflow-x: auto; 
+        }
+        .success { border-left: 4px solid #107c10; }
+        .error { border-left: 4px solid #d13438; }
+        .warning { border-left: 4px solid #f9a825; }
+        .info { border-left: 4px solid #0078d4; }
+        h1, h2, h3 { color: #ffffff; }
+        .status { font-weight: bold; }
+        .timestamp { color: #808080; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Frontend API Test Console</h1>
+            <p>Herramienta de diagnóstico para la integración Frontend-Backend</p>
+        </div>
+
+        <div class="test-section">
+            <h2>🏥 Pruebas de Conectividad</h2>
+            <button class="btn" onclick="testBasicConnectivity()">Test Conectividad Básica</button>
+            <button class="btn" onclick="testCORS()">Test CORS</button>
+            <button class="btn" onclick="testProxy()">Test Proxy (Frontend)</button>
+            <div id="connectivity-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Pruebas de Endpoints</h2>
+            <button class="btn" onclick="testAllEndpoints()">Test Todos los Endpoints</button>
+            <button class="btn" onclick="testDataEndpoint()">Test /data/</button>
+            <button class="btn" onclick="testHealthEndpoint()">Test /health</button>
+            <button class="btn" onclick="testConfigEndpoint()">Test /config</button>
+            <div id="endpoints-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 Simulación Frontend</h2>
+            <button class="btn" onclick="simulateVueApp()">Simular Aplicación Vue</button>
+            <button class="btn" onclick="simulateDataStore()">Simular Data Store</button>
+            <button class="btn" onclick="simulateConfigStore()">Simular Config Store</button>
+            <div id="simulation-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧹 Utilidades</h2>
+            <button class="btn" onclick="clearAllResults()">Limpiar Resultados</button>
+            <button class="btn" onclick="exportResults()">Exportar Resultados</button>
+            <button class="btn" onclick="showNetworkInfo()">Info de Red</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuración
+        const API_BASE = 'http://localhost:8000';
+        const FRONTEND_BASE = 'http://localhost:5173';
+        
+        // Utilidades
+        function log(message, type = 'info', containerId = 'connectivity-results') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `
+                <span class="timestamp">[${new Date().toLocaleTimeString()}]</span>
+                <span class="status">${type.toUpperCase()}:</span>
+                ${message}
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        function clearAllResults() {
+            ['connectivity-results', 'endpoints-results', 'simulation-results'].forEach(clearResults);
+        }
+
+        // Pruebas de conectividad
+        async function testBasicConnectivity() {
+            clearResults('connectivity-results');
+            log('Iniciando pruebas de conectividad básica...', 'info', 'connectivity-results');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Backend conectado correctamente\\nStatus: ${data.status}\\nESP32: ${data.esp32_connection?.connected ? 'Conectado' : 'Desconectado'}`, 'success', 'connectivity-results');
+                } else {
+                    log(`❌ Backend respondió con error: ${response.status} ${response.statusText}`, 'error', 'connectivity-results');
+                }
+            } catch (error) {
+                log(`❌ No se puede conectar al backend: ${error.message}`, 'error', 'connectivity-results');
+            }
+        }
+
+        async function testCORS() {
+            log('Probando configuración CORS...', 'info', 'connectivity-results');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                log(`✅ CORS configurado correctamente\\n${JSON.stringify(corsHeaders, null, 2)}`, 'success', 'connectivity-results');
+            } catch (error) {
+                log(`❌ Error en CORS: ${error.message}`, 'error', 'connectivity-results');
+            }
+        }
+
+        async function testProxy() {
+            log('Probando proxy del frontend...', 'info', 'connectivity-results');
+            
+            try {
+                const response = await fetch(`${FRONTEND_BASE}/api/data/`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Proxy funcionando correctamente\\nVoltaje batería: ${data.voltageBatterySensor2}V\\nSOC: ${data.estimatedSOC}%`, 'success', 'connectivity-results');
+                } else {
+                    log(`❌ Error en proxy: ${response.status} ${response.statusText}`, 'error', 'connectivity-results');
+                }
+            } catch (error) {
+                log(`❌ Error conectando via proxy: ${error.message}`, 'error', 'connectivity-results');
+            }
+        }
+
+        // Pruebas de endpoints
+        async function testAllEndpoints() {
+            clearResults('endpoints-results');
+            log('Probando todos los endpoints...', 'info', 'endpoints-results');
+            
+            const endpoints = [
+                { name: 'Health', url: '/health', method: 'GET' },
+                { name: 'Data', url: '/data/', method: 'GET' },
+                { name: 'Schedule', url: '/schedule/', method: 'GET' },
+                { name: 'Configurations', url: '/config/custom/configurations', method: 'GET' },
+                { name: 'Set Parameter', url: '/config/parameter', method: 'POST', body: { parameter: 'bulkVoltage', value: 14.4 } }
+            ];
+            
+            for (const endpoint of endpoints) {
+                await testEndpoint(endpoint, 'endpoints-results');
+            }
+        }
+
+        async function testEndpoint(endpoint, containerId) {
+            try {
+                const options = {
+                    method: endpoint.method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                };
+                
+                if (endpoint.body) {
+                    options.body = JSON.stringify(endpoint.body);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint.url}`, options);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ ${endpoint.name}: OK\\n${JSON.stringify(data, null, 2).substring(0, 200)}...`, 'success', containerId);
+                } else {
+                    log(`❌ ${endpoint.name}: ${response.status} ${response.statusText}`, 'error', containerId);
+                }
+            } catch (error) {
+                log(`❌ ${endpoint.name}: ${error.message}`, 'error', containerId);
+            }
+        }
+
+        async function testDataEndpoint() {
+            clearResults('endpoints-results');
+            await testEndpoint({ name: 'Data Endpoint', url: '/data/', method: 'GET' }, 'endpoints-results');
+        }
+
+        async function testHealthEndpoint() {
+            clearResults('endpoints-results');
+            await testEndpoint({ name: 'Health Endpoint', url: '/health', method: 'GET' }, 'endpoints-results');
+        }
+
+        async function testConfigEndpoint() {
+            clearResults('endpoints-results');
+            await testEndpoint({ name: 'Config Endpoint', url: '/config/parameter', method: 'POST', body: { parameter: 'bulkVoltage', value: 14.4 } }, 'endpoints-results');
+        }
+
+        // Simulación del frontend
+        async function simulateVueApp() {
+            clearResults('simulation-results');
+            log('Simulando inicialización de aplicación Vue...', 'info', 'simulation-results');
+            
+            try {
+                // Simular carga inicial de datos
+                const dataResponse = await fetch(`${API_BASE}/data/`);
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                
+                if (dataResponse.ok && healthResponse.ok) {
+                    const data = await dataResponse.json();
+                    const health = await healthResponse.json();
+                    
+                    log(`✅ App Vue simulada exitosamente\\nDatos cargados: ${Object.keys(data).length} propiedades\\nEstado ESP32: ${health.esp32_connection?.connected ? 'Conectado' : 'Desconectado'}`, 'success', 'simulation-results');
+                    
+                    // Simular polling
+                    log('🔄 Iniciando simulación de polling...', 'info', 'simulation-results');
+                    let pollCount = 0;
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const pollResponse = await fetch(`${API_BASE}/data/`);
+                            if (pollResponse.ok) {
+                                pollCount++;
+                                log(`📊 Poll #${pollCount}: Datos actualizados (SOC: ${(await pollResponse.json()).estimatedSOC}%)`, 'info', 'simulation-results');
+                                
+                                if (pollCount >= 3) {
+                                    clearInterval(pollInterval);
+                                    log('✅ Simulación de polling completada', 'success', 'simulation-results');
+                                }
+                            }
+                        } catch (error) {
+                            log(`❌ Error en polling: ${error.message}`, 'error', 'simulation-results');
+                            clearInterval(pollInterval);
+                        }
+                    }, 2000);
+                } else {
+                    log('❌ Error cargando datos iniciales', 'error', 'simulation-results');
+                }
+            } catch (error) {
+                log(`❌ Error simulando Vue app: ${error.message}`, 'error', 'simulation-results');
+            }
+        }
+
+        async function simulateDataStore() {
+            log('Simulando Data Store...', 'info', 'simulation-results');
+            
+            const dataStore = {
+                data: null,
+                loading: false,
+                error: null,
+                connected: false
+            };
+            
+            try {
+                dataStore.loading = true;
+                const response = await fetch(`${API_BASE}/data/`);
+                
+                if (response.ok) {
+                    dataStore.data = await response.json();
+                    dataStore.connected = true;
+                    dataStore.loading = false;
+                    
+                    log(`✅ Data Store simulado\\nBatería: ${dataStore.data.voltageBatterySensor2}V\\nSOC: ${dataStore.data.estimatedSOC}%\\nEstado: ${dataStore.data.chargeState}`, 'success', 'simulation-results');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                dataStore.error = error.message;
+                dataStore.loading = false;
+                dataStore.connected = false;
+                log(`❌ Error en Data Store: ${error.message}`, 'error', 'simulation-results');
+            }
+        }
+
+        async function simulateConfigStore() {
+            log('Simulando Config Store...', 'info', 'simulation-results');
+            
+            try {
+                const response = await fetch(`${API_BASE}/data/`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const configParams = {
+                        batteryCapacity: data.batteryCapacity,
+                        isLithium: data.isLithium,
+                        bulkVoltage: data.bulkVoltage,
+                        absorptionVoltage: data.absorptionVoltage,
+                        floatVoltage: data.floatVoltage
+                    };
+                    
+                    log(`✅ Config Store simulado\\n${JSON.stringify(configParams, null, 2)}`, 'success', 'simulation-results');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ Error en Config Store: ${error.message}`, 'error', 'simulation-results');
+            }
+        }
+
+        function showNetworkInfo() {
+            log('Información de red...', 'info', 'connectivity-results');
+            log(`Frontend URL: ${FRONTEND_BASE}\\nBackend URL: ${API_BASE}\\nOrigen actual: ${window.location.origin}\\nUser Agent: ${navigator.userAgent}`, 'info', 'connectivity-results');
+        }
+
+        function exportResults() {
+            const results = [];
+            ['connectivity-results', 'endpoints-results', 'simulation-results'].forEach(id => {
+                const container = document.getElementById(id);
+                const logs = Array.from(container.children).map(div => div.textContent);
+                results.push(`=== ${id.replace('-results', '').toUpperCase()} ===`);
+                results.push(...logs);
+                results.push('');
+            });
+            
+            const blob = new Blob([results.join('\\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `frontend-api-test-${new Date().toISOString().slice(0, 19)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Auto-run basic tests on load
+        window.addEventListener('load', () => {
+            setTimeout(testBasicConnectivity, 500);
+        });
+    </script>
+</body>
+</html>

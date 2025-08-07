@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { margin: 5px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Integración Frontend-Backend</h1>
+    
+    <div id="tests">
+        <button onclick="testHealth()">🏥 Test Health</button>
+        <button onclick="testData()">📊 Test Data</button>
+        <button onclick="testSchedule()">⏰ Test Schedule</button>
+        <button onclick="testConfigurations()">⚙️ Test Configurations</button>
+        <button onclick="testSetParameter()">🔧 Test Set Parameter</button>
+        <button onclick="clearResults()">🧹 Clear</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(test, success, data, error = null) {
+            const div = document.createElement('div');
+            div.className = `test ${success ? 'success' : 'error'}`;
+            
+            let content = `<h3>${success ? '✅' : '❌'} ${test}</h3>`;
+            
+            if (success) {
+                content += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } else {
+                content += `<p><strong>Error:</strong> ${error}</p>`;
+                if (data) {
+                    content += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            }
+            
+            div.innerHTML = content;
+            resultsDiv.insertBefore(div, resultsDiv.firstChild);
+        }
+
+        async function makeRequest(endpoint, method = 'GET', body = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testHealth() {
+            const result = await makeRequest('/health');
+            addResult('Health Check', result.success, result.data, result.error);
+        }
+
+        async function testData() {
+            const result = await makeRequest('/data/');
+            addResult('Get Data', result.success, result.data, result.error);
+        }
+
+        async function testSchedule() {
+            const result = await makeRequest('/schedule/');
+            addResult('Get Schedule', result.success, result.data, result.error);
+        }
+
+        async function testConfigurations() {
+            const result = await makeRequest('/config/custom/configurations');
+            addResult('Get Configurations', result.success, result.data, result.error);
+        }
+
+        async function testSetParameter() {
+            const testParam = {
+                parameter: 'bulkVoltage',
+                value: 14.4
+            };
+            const result = await makeRequest('/config/parameter', 'POST', testParam);
+            addResult('Set Parameter', result.success, result.data, result.error);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        // Auto-run initial tests
+        setTimeout(() => {
+            testHealth();
+            testData();
+        }, 1000);
+    </script>
+</body>
+</html>
