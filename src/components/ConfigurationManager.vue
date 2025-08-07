@@ -49,9 +49,25 @@
     <!-- Lista de Configuraciones Guardadas -->
     <div v-if="Object.keys(savedConfigs).length > 0">
       <div class="flex justify-between items-center mb-3">
-        <h4 class="font-medium text-gray-900">Configuraciones Guardadas</h4>
-        <!-- Campo de búsqueda -->
-        <div class="flex items-center gap-2">
+        <button
+          @click="toggleConfigurationsExpanded"
+          class="flex items-center gap-2 font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200"
+        >
+          <!-- Icono de expansión/colapso -->
+          <svg 
+            class="w-5 h-5 transition-transform duration-200"
+            :class="{ 'rotate-90': configurationsExpanded }"
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+          <span>Configuraciones Guardadas ({{ Object.keys(savedConfigs).length }})</span>
+        </button>
+        
+        <!-- Campo de búsqueda - solo visible cuando está expandido -->
+        <div v-if="configurationsExpanded" class="flex items-center gap-2">
           <input
             v-model="searchTerm"
             type="text"
@@ -68,7 +84,53 @@
           </button>
         </div>
       </div>
-      <div class="space-y-3">
+      
+      <!-- Preview colapsado - muestra solo nombres -->
+      <div 
+        v-if="!configurationsExpanded" 
+        class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600"
+      >
+        <div class="flex flex-wrap gap-2">
+          <span 
+            v-for="(config, name) in Object.entries(savedConfigs).slice(0, 3)" 
+            :key="name"
+            class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs"
+          >
+            📁 {{ name }}
+          </span>
+          <span 
+            v-if="Object.keys(savedConfigs).length > 3"
+            class="inline-flex items-center px-2 py-1 bg-gray-200 text-gray-600 rounded-full text-xs"
+          >
+            +{{ Object.keys(savedConfigs).length - 3 }} más
+          </span>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">
+          Haz clic arriba para expandir y gestionar las configuraciones
+        </p>
+      </div>
+      
+      <!-- Contenedor colapsable con scroll -->
+      <div 
+        v-if="configurationsExpanded"
+        class="transition-all duration-300 ease-in-out"
+        :class="{ 
+          'max-h-96 overflow-y-auto border border-gray-200 rounded-lg': Object.keys(savedConfigs).length > 5,
+          'max-h-none': Object.keys(savedConfigs).length <= 5
+        }"
+      >
+        <!-- Indicador de scroll superior -->
+        <div 
+          v-if="Object.keys(savedConfigs).length > 5"
+          class="sticky top-0 bg-gradient-to-b from-blue-50 to-transparent text-center py-2 text-xs text-blue-600 font-medium z-10"
+        >
+          📋 {{ Object.keys(savedConfigs).length }} configuraciones - Desplázate para ver todas
+        </div>
+        
+        <div 
+          class="space-y-3"
+          :class="{ 'px-3 pb-3': Object.keys(savedConfigs).length > 5, 'pr-2': Object.keys(savedConfigs).length <= 5 }"
+        >
         <div
           v-for="(config, name) in savedConfigs"
           :key="name"
@@ -141,6 +203,7 @@
               </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -218,6 +281,7 @@ const showDeleteModal = ref(false)
 const configToDelete = ref('')
 const searchTerm = ref('')
 const filteredConfigs = ref({})
+const configurationsExpanded = ref(false) // Por defecto colapsado
 
 const savedConfigs = computed(() => {
   if (!searchTerm.value) {
@@ -270,6 +334,10 @@ async function onSearch() {
 function clearSearch() {
   searchTerm.value = ''
   filteredConfigs.value = {}
+}
+
+function toggleConfigurationsExpanded() {
+  configurationsExpanded.value = !configurationsExpanded.value
 }
 
 async function saveCurrentConfiguration() {
@@ -423,3 +491,60 @@ function formatDate(dateString) {
   })
 }
 </script>
+
+<style scoped>
+/* Scroll personalizado para la lista de configuraciones */
+.max-h-96::-webkit-scrollbar {
+  width: 8px;
+}
+
+.max-h-96::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.max-h-96::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.max-h-96::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.max-h-96::-webkit-scrollbar-thumb:active {
+  background: #64748b;
+}
+
+/* Animación suave para el icono de expansión */
+.rotate-90 {
+  transform: rotate(90deg);
+}
+
+/* Sombra sutil para el contenedor con scroll */
+.max-h-96 {
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  background: #fafafa;
+}
+
+/* Efecto hover para el botón de expansión */
+.flex.items-center.gap-2:hover {
+  transform: translateX(2px);
+}
+
+/* Gradiente para indicar scroll disponible */
+.max-h-96::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  display: block;
+  height: 20px;
+  background: linear-gradient(transparent, rgba(249, 250, 251, 0.8));
+  pointer-events: none;
+  margin-top: -20px;
+}
+</style>

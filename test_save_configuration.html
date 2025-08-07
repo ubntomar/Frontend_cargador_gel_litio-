@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Guardar Configuración</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        .test-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #059669;
+            background: #ecfdf5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #0369a1;
+            background: #f0f9ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .test-input {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .test-results {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f9fafb;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Guardar Configuración</h1>
+    <p>Esta página prueba el flujo completo de guardar configuraciones personalizadas.</p>
+
+    <!-- Test 1: Verificar API Connection -->
+    <div class="test-section">
+        <h2 class="test-title">1. Verificar Conexión con API</h2>
+        <button class="test-button" onclick="testAPIConnection()">🔌 Probar Conexión</button>
+        <div id="api-connection-result"></div>
+    </div>
+
+    <!-- Test 2: Obtener Datos Actuales -->
+    <div class="test-section">
+        <h2 class="test-title">2. Obtener Configuración Actual</h2>
+        <button class="test-button" onclick="getCurrentConfiguration()">📊 Obtener Datos Actuales</button>
+        <div id="current-config-result"></div>
+        <div id="current-config-data" class="test-results" style="display: none;"></div>
+    </div>
+
+    <!-- Test 3: Validar Endpoints de Configuración -->
+    <div class="test-section">
+        <h2 class="test-title">3. Probar Endpoints de Configuración</h2>
+        <button class="test-button" onclick="testConfigurationEndpoints()">🔍 Probar Endpoints</button>
+        <div id="endpoints-result"></div>
+    </div>
+
+    <!-- Test 4: Guardar Configuración de Prueba -->
+    <div class="test-section">
+        <h2 class="test-title">4. Guardar Configuración de Prueba</h2>
+        <input type="text" id="test-config-name" class="test-input" placeholder="Nombre de configuración de prueba" value="Test Config - ">
+        <button class="test-button" onclick="saveTestConfiguration()">💾 Guardar Configuración</button>
+        <div id="save-config-result"></div>
+    </div>
+
+    <!-- Test 5: Listar Configuraciones Guardadas -->
+    <div class="test-section">
+        <h2 class="test-title">5. Listar Configuraciones Guardadas</h2>
+        <button class="test-button" onclick="listSavedConfigurations()">📋 Listar Configuraciones</button>
+        <div id="list-configs-result"></div>
+        <div id="list-configs-data" class="test-results" style="display: none;"></div>
+    </div>
+
+    <!-- Test 6: Aplicar Configuración -->
+    <div class="test-section">
+        <h2 class="test-title">6. Aplicar Configuración</h2>
+        <select id="config-to-apply" class="test-input">
+            <option value="">Selecciona una configuración...</option>
+        </select>
+        <button class="test-button" onclick="applySelectedConfiguration()">🚀 Aplicar Configuración</button>
+        <div id="apply-config-result"></div>
+    </div>
+
+    <!-- Test 7: Eliminar Configuración de Prueba -->
+    <div class="test-section">
+        <h2 class="test-title">7. Limpiar - Eliminar Configuración de Prueba</h2>
+        <select id="config-to-delete" class="test-input">
+            <option value="">Selecciona una configuración...</option>
+        </select>
+        <button class="test-button" onclick="deleteSelectedConfiguration()">🗑️ Eliminar Configuración</button>
+        <div id="delete-config-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        // Función auxiliar para mostrar resultados
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showLoading(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="info"><span class="spinner"></span> ${message}</div>`;
+        }
+
+        // Test 1: Verificar conexión con API
+        async function testAPIConnection() {
+            showLoading('api-connection-result', 'Probando conexión...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/data`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('api-connection-result', 
+                        `✅ Conexión exitosa! API respondió con datos del ESP32. Voltaje batería: ${data.batteryVoltage}V`, 
+                        'success');
+                } else {
+                    showResult('api-connection-result', 
+                        `❌ Error HTTP ${response.status}: ${response.statusText}`, 
+                        'error');
+                }
+            } catch (error) {
+                showResult('api-connection-result', 
+                    `❌ Error de conexión: ${error.message}`, 
+                    'error');
+            }
+        }
+
+        // Test 2: Obtener configuración actual
+        async function getCurrentConfiguration() {
+            showLoading('current-config-result', 'Obteniendo configuración actual...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/data`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Filtrar solo los parámetros configurables
+                    const configurableParams = {
+                        batteryCapacity: data.batteryCapacity,
+                        isLithium: data.isLithium,
+                        thresholdPercentage: data.thresholdPercentage,
+                        maxAllowedCurrent: data.maxAllowedCurrent,
+                        bulkVoltage: data.bulkVoltage,
+                        absorptionVoltage: data.absorptionVoltage,
+                        floatVoltage: data.floatVoltage,
+                        useFuenteDC: data.useFuenteDC,
+                        fuenteDC_Amps: data.fuenteDC_Amps,
+                        factorDivider: data.factorDivider
+                    };
+                    
+                    showResult('current-config-result', 
+                        '✅ Configuración actual obtenida exitosamente', 
+                        'success');
+                    
+                    document.getElementById('current-config-data').innerHTML = 
+                        JSON.stringify(configurableParams, null, 2);
+                    document.getElementById('current-config-data').style.display = 'block';
+                    
+                    // Guardar para usar en tests posteriores
+                    window.currentConfig = configurableParams;
+                    
+                } else {
+                    showResult('current-config-result', 
+                        `❌ Error al obtener datos: HTTP ${response.status}`, 
+                        'error');
+                }
+            } catch (error) {
+                showResult('current-config-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error');
+            }
+        }
+
+        // Test 3: Probar endpoints de configuración
+        async function testConfigurationEndpoints() {
+            showLoading('endpoints-result', 'Probando endpoints...');
+            
+            const endpoints = [
+                { method: 'GET', url: '/config/custom/configurations', name: 'Listar configuraciones' },
+                { method: 'GET', url: '/config/custom/configurations/info', name: 'Info de configuraciones' },
+                { method: 'POST', url: '/config/custom/configurations/validate', name: 'Validar configuración', body: window.currentConfig || {} }
+            ];
+            
+            let results = [];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const options = {
+                        method: endpoint.method,
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+                    
+                    if (endpoint.body) {
+                        options.body = JSON.stringify(endpoint.body);
+                    }
+                    
+                    const response = await fetch(`${API_BASE}${endpoint.url}`, options);
+                    const status = response.ok ? '✅' : '❌';
+                    results.push(`${status} ${endpoint.name}: HTTP ${response.status}`);
+                    
+                } catch (error) {
+                    results.push(`❌ ${endpoint.name}: ${error.message}`);
+                }
+            }
+            
+            showResult('endpoints-result', results.join('<br>'), 'info');
+        }
+
+        // Test 4: Guardar configuración de prueba
+        async function saveTestConfiguration() {
+            const nameInput = document.getElementById('test-config-name');
+            const configName = nameInput.value.trim() + Date.now();
+            
+            if (!configName) {
+                showResult('save-config-result', '❌ Por favor ingresa un nombre para la configuración', 'error');
+                return;
+            }
+            
+            if (!window.currentConfig) {
+                showResult('save-config-result', '❌ Primero obtén la configuración actual (Test 2)', 'error');
+                return;
+            }
+            
+            showLoading('save-config-result', 'Guardando configuración...');
+            
+            try {
+                const configToSave = {
+                    ...window.currentConfig,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                const response = await fetch(`${API_BASE}/config/custom/configurations/${encodeURIComponent(configName)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(configToSave)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResult('save-config-result', 
+                        `✅ Configuración "${configName}" guardada exitosamente`, 
+                        'success');
+                    
+                    // Guardar el nombre para tests posteriores
+                    window.testConfigName = configName;
+                    
+                } else {
+                    const errorData = await response.text();
+                    showResult('save-config-result', 
+                        `❌ Error al guardar: HTTP ${response.status} - ${errorData}`, 
+                        'error');
+                }
+                
+            } catch (error) {
+                showResult('save-config-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error');
+            }
+        }
+
+        // Test 5: Listar configuraciones guardadas
+        async function listSavedConfigurations() {
+            showLoading('list-configs-result', 'Obteniendo lista de configuraciones...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations`);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    if (result.configurations && Object.keys(result.configurations).length > 0) {
+                        const count = Object.keys(result.configurations).length;
+                        showResult('list-configs-result', 
+                            `✅ ${count} configuración(es) encontrada(s)`, 
+                            'success');
+                        
+                        document.getElementById('list-configs-data').innerHTML = 
+                            JSON.stringify(result.configurations, null, 2);
+                        document.getElementById('list-configs-data').style.display = 'block';
+                        
+                        // Actualizar selects
+                        updateConfigSelects(result.configurations);
+                        
+                    } else {
+                        showResult('list-configs-result', 
+                            '⚠️ No hay configuraciones guardadas', 
+                            'info');
+                    }
+                    
+                } else {
+                    const errorData = await response.text();
+                    showResult('list-configs-result', 
+                        `❌ Error al listar: HTTP ${response.status} - ${errorData}`, 
+                        'error');
+                }
+                
+            } catch (error) {
+                showResult('list-configs-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error');
+            }
+        }
+
+        // Actualizar selects con configuraciones disponibles
+        function updateConfigSelects(configurations) {
+            const applySelect = document.getElementById('config-to-apply');
+            const deleteSelect = document.getElementById('config-to-delete');
+            
+            // Limpiar opciones existentes
+            applySelect.innerHTML = '<option value="">Selecciona una configuración...</option>';
+            deleteSelect.innerHTML = '<option value="">Selecciona una configuración...</option>';
+            
+            // Agregar configuraciones
+            for (const configName in configurations) {
+                const option1 = document.createElement('option');
+                option1.value = configName;
+                option1.textContent = configName;
+                applySelect.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = configName;
+                option2.textContent = configName;
+                deleteSelect.appendChild(option2);
+            }
+        }
+
+        // Test 6: Aplicar configuración
+        async function applySelectedConfiguration() {
+            const select = document.getElementById('config-to-apply');
+            const configName = select.value;
+            
+            if (!configName) {
+                showResult('apply-config-result', '❌ Por favor selecciona una configuración', 'error');
+                return;
+            }
+            
+            showLoading('apply-config-result', `Aplicando configuración "${configName}"... (puede tomar hasta 30s)`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations/${encodeURIComponent(configName)}/apply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showResult('apply-config-result', 
+                        `✅ Configuración "${configName}" aplicada exitosamente`, 
+                        'success');
+                } else {
+                    const errorData = await response.text();
+                    showResult('apply-config-result', 
+                        `❌ Error al aplicar: HTTP ${response.status} - ${errorData}`, 
+                        'error');
+                }
+                
+            } catch (error) {
+                showResult('apply-config-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error');
+            }
+        }
+
+        // Test 7: Eliminar configuración
+        async function deleteSelectedConfiguration() {
+            const select = document.getElementById('config-to-delete');
+            const configName = select.value;
+            
+            if (!configName) {
+                showResult('delete-config-result', '❌ Por favor selecciona una configuración', 'error');
+                return;
+            }
+            
+            if (!confirm(`¿Estás seguro de eliminar la configuración "${configName}"?`)) {
+                return;
+            }
+            
+            showLoading('delete-config-result', `Eliminando configuración "${configName}"...`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations/${encodeURIComponent(configName)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showResult('delete-config-result', 
+                        `✅ Configuración "${configName}" eliminada exitosamente`, 
+                        'success');
+                    
+                    // Actualizar listas
+                    listSavedConfigurations();
+                    
+                } else {
+                    const errorData = await response.text();
+                    showResult('delete-config-result', 
+                        `❌ Error al eliminar: HTTP ${response.status} - ${errorData}`, 
+                        'error');
+                }
+                
+            } catch (error) {
+                showResult('delete-config-result', 
+                    `❌ Error: ${error.message}`, 
+                    'error');
+            }
+        }
+
+        // Auto-ejecutar algunos tests al cargar
+        window.addEventListener('load', () => {
+            document.getElementById('test-config-name').value = 'Test Config - ' + new Date().toLocaleTimeString();
+        });
+    </script>
+</body>
+</html>

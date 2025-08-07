@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Frontend - Guardar Configuraciones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        .test-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #059669;
+            background: #ecfdf5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #0369a1;
+            background: #f0f9ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #b45309;
+            background: #fffbeb;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .test-input {
+            width: 300px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .iframe-container {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .step-instructions {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #2563eb;
+        }
+        .step-instructions h4 {
+            margin: 0 0 10px 0;
+            color: #1f2937;
+        }
+        .step-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .checklist {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .checklist h4 {
+            margin: 0 0 10px 0;
+            color: #374151;
+        }
+        .checklist label {
+            display: block;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+        .checklist input[type="checkbox"] {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Frontend - Guardar Configuraciones</h1>
+    <p>Esta página te guía paso a paso para probar el flujo completo de guardar configuraciones en el frontend.</p>
+
+    <!-- Test Status -->
+    <div class="test-section">
+        <h2 class="test-title">Estado del Sistema</h2>
+        <button class="test-button" onclick="checkSystemStatus()">🔍 Verificar Estado</button>
+        <div id="system-status"></div>
+    </div>
+
+    <!-- Instrucciones paso a paso -->
+    <div class="test-section">
+        <h2 class="test-title">📋 Instrucciones de Prueba</h2>
+        <div class="step-instructions">
+            <h4>Pasos para probar "Guardar Configuración":</h4>
+            <ol>
+                <li><strong>Abre el frontend</strong> - Ve a la aplicación en otra pestaña/ventana</li>
+                <li><strong>Navega a "Configuraciones"</strong> - Busca la sección de configuraciones personalizadas</li>
+                <li><strong>Encuentra "Guardar Configuración Actual"</strong> - Debería estar en la parte superior</li>
+                <li><strong>Ingresa un nombre</strong> - Ej: "Mi Configuración Test"</li>
+                <li><strong>Haz clic en "Guardar"</strong> - Debe mostrar spinner mientras guarda</li>
+                <li><strong>Verifica que aparezca</strong> - Debe aparecer en la lista de configuraciones guardadas</li>
+                <li><strong>Prueba aplicar</strong> - Haz clic en "Aplicar" en la configuración guardada</li>
+                <li><strong>Prueba eliminar</strong> - Elimina la configuración de prueba</li>
+            </ol>
+        </div>
+        
+        <div class="checklist">
+            <h4>✅ Checklist de Validación:</h4>
+            <label><input type="checkbox" id="check1"> El botón "Guardar" muestra spinner mientras procesa</label>
+            <label><input type="checkbox" id="check2"> Aparece notificación de éxito al guardar</label>
+            <label><input type="checkbox" id="check3"> La configuración aparece en la lista</label>
+            <label><input type="checkbox" id="check4"> El botón "Aplicar" funciona y muestra spinner</label>
+            <label><input type="checkbox" id="check5"> La funcionalidad de eliminar funciona</label>
+            <label><input type="checkbox" id="check6"> Los spinners SVG se ven profesionales</label>
+            <label><input type="checkbox" id="check7"> No aparecen errores de "DOMException"</label>
+        </div>
+    </div>
+
+    <!-- Frontend embebido -->
+    <div class="test-section">
+        <h2 class="test-title">🖥️ Frontend de Prueba</h2>
+        <div class="info">
+            <strong>Nota:</strong> Puedes usar este iframe para probar directamente, o abrir 
+            <a href="http://localhost:5173" target="_blank">http://localhost:5173</a> en una nueva pestaña.
+        </div>
+        <div class="iframe-container">
+            <iframe src="http://localhost:5173" title="Frontend Cargador"></iframe>
+        </div>
+    </div>
+
+    <!-- Test directo de API -->
+    <div class="test-section">
+        <h2 class="test-title">🔧 Test Directo de API</h2>
+        <div class="warning">
+            <strong>Verificación Automática:</strong> Estos tests verifican que los endpoints funcionen correctamente.
+        </div>
+        
+        <button class="test-button" onclick="testSaveFlow()">💾 Test Completo de Guardado</button>
+        <button class="test-button" onclick="testListConfigurations()">📋 Listar Configuraciones</button>
+        <button class="test-button" onclick="testValidateCurrentConfig()">✅ Validar Configuración Actual</button>
+        
+        <div id="api-test-results"></div>
+    </div>
+
+    <!-- Troubleshooting -->
+    <div class="test-section">
+        <h2 class="test-title">🔧 Resolución de Problemas</h2>
+        <div class="warning">
+            <h4>Si encuentras problemas:</h4>
+            <ul>
+                <li><strong>Error 429 (Rate Limit):</strong> Espera unos segundos entre requests</li>
+                <li><strong>Error 422 (Validation):</strong> Verifica que los valores estén en rango válido</li>
+                <li><strong>Timeout:</strong> El ESP32 puede estar ocupado, intenta más tarde</li>
+                <li><strong>DOMException:</strong> Ya debería estar solucionado con la sanitización</li>
+                <li><strong>Spinners no aparecen:</strong> Verifica que Tailwind CSS esté cargado</li>
+            </ul>
+        </div>
+        
+        <button class="test-button" onclick="checkTroubleshooting()">🔍 Diagnóstico Rápido</button>
+        <div id="troubleshooting-results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showLoading(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="info"><span class="spinner"></span> ${message}</div>`;
+        }
+
+        async function checkSystemStatus() {
+            showLoading('system-status', 'Verificando estado del sistema...');
+            
+            let apiStatus = '❌';
+            let frontendStatus = '❌';
+            let configEndpoints = '❌';
+            
+            // Test API
+            try {
+                const apiResponse = await fetch(`${API_BASE}/data`, { timeout: 5000 });
+                if (apiResponse.ok) {
+                    apiStatus = '✅';
+                }
+            } catch (e) {
+                apiStatus = '❌ ' + e.message;
+            }
+            
+            // Test Frontend
+            try {
+                const frontendResponse = await fetch('http://localhost:5173', { timeout: 5000 });
+                if (frontendResponse.ok) {
+                    frontendStatus = '✅';
+                }
+            } catch (e) {
+                frontendStatus = '❌ ' + e.message;
+            }
+            
+            // Test Config Endpoints
+            try {
+                const configResponse = await fetch(`${API_BASE}/config/custom/configurations`, { timeout: 5000 });
+                if (configResponse.ok) {
+                    configEndpoints = '✅';
+                }
+            } catch (e) {
+                configEndpoints = '❌ ' + e.message;
+            }
+            
+            showResult('system-status', `
+                <strong>Estado del Sistema:</strong><br>
+                • API (puerto 8000): ${apiStatus}<br>
+                • Frontend (puerto 5173): ${frontendStatus}<br>
+                • Endpoints de Configuración: ${configEndpoints}
+            `, apiStatus.includes('✅') && frontendStatus.includes('✅') ? 'success' : 'error');
+        }
+
+        async function testSaveFlow() {
+            showLoading('api-test-results', 'Ejecutando test completo de guardado...');
+            
+            try {
+                // 1. Obtener configuración actual
+                const dataResponse = await fetch(`${API_BASE}/data`);
+                if (!dataResponse.ok) throw new Error('No se pudo obtener configuración actual');
+                
+                const currentData = await dataResponse.json();
+                const testConfig = {
+                    batteryCapacity: currentData.batteryCapacity,
+                    isLithium: currentData.isLithium,
+                    thresholdPercentage: currentData.thresholdPercentage,
+                    maxAllowedCurrent: currentData.maxAllowedCurrent,
+                    bulkVoltage: currentData.bulkVoltage,
+                    absorptionVoltage: currentData.absorptionVoltage,
+                    floatVoltage: currentData.floatVoltage,
+                    useFuenteDC: currentData.useFuenteDC,
+                    fuenteDC_Amps: currentData.fuenteDC_Amps,
+                    factorDivider: currentData.factorDivider,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // 2. Guardar configuración de prueba
+                const testName = `Frontend_Test_${Date.now()}`;
+                const saveResponse = await fetch(`${API_BASE}/config/custom/configurations/${encodeURIComponent(testName)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testConfig)
+                });
+                
+                if (!saveResponse.ok) throw new Error('Error al guardar configuración');
+                
+                // 3. Verificar que se guardó
+                const listResponse = await fetch(`${API_BASE}/config/custom/configurations`);
+                if (!listResponse.ok) throw new Error('Error al listar configuraciones');
+                
+                const listData = await listResponse.json();
+                const configurations = listData.configurations || {};
+                
+                if (!configurations[testName]) {
+                    throw new Error('La configuración no aparece en la lista');
+                }
+                
+                // 4. Eliminar configuración de prueba
+                const deleteResponse = await fetch(`${API_BASE}/config/custom/configurations/${encodeURIComponent(testName)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!deleteResponse.ok) throw new Error('Error al eliminar configuración');
+                
+                showResult('api-test-results', `
+                    ✅ <strong>Test completo exitoso:</strong><br>
+                    • Configuración actual obtenida ✅<br>
+                    • Configuración "${testName}" guardada ✅<br>
+                    • Configuración aparece en lista ✅<br>
+                    • Configuración eliminada ✅<br>
+                    <br>
+                    <strong>El flujo de guardado funciona correctamente!</strong>
+                `, 'success');
+                
+            } catch (error) {
+                showResult('api-test-results', `
+                    ❌ <strong>Error en test:</strong><br>
+                    ${error.message}
+                `, 'error');
+            }
+        }
+
+        async function testListConfigurations() {
+            showLoading('api-test-results', 'Obteniendo lista de configuraciones...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/config/custom/configurations`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                const configurations = data.configurations || {};
+                const count = Object.keys(configurations).length;
+                
+                let configList = '';
+                for (const [name, config] of Object.entries(configurations)) {
+                    configList += `<br>• ${name} (${config.batteryCapacity}Ah, ${config.isLithium ? 'Litio' : 'GEL/AGM'})`;
+                }
+                
+                showResult('api-test-results', `
+                    ✅ <strong>Configuraciones encontradas: ${count}</strong>
+                    ${configList}
+                `, 'success');
+                
+            } catch (error) {
+                showResult('api-test-results', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testValidateCurrentConfig() {
+            showLoading('api-test-results', 'Validando configuración actual...');
+            
+            try {
+                const dataResponse = await fetch(`${API_BASE}/data`);
+                if (!dataResponse.ok) throw new Error('No se pudo obtener configuración actual');
+                
+                const currentData = await dataResponse.json();
+                const config = {
+                    batteryCapacity: currentData.batteryCapacity,
+                    isLithium: currentData.isLithium,
+                    thresholdPercentage: currentData.thresholdPercentage,
+                    maxAllowedCurrent: currentData.maxAllowedCurrent,
+                    bulkVoltage: currentData.bulkVoltage,
+                    absorptionVoltage: currentData.absorptionVoltage,
+                    floatVoltage: currentData.floatVoltage,
+                    useFuenteDC: currentData.useFuenteDC,
+                    fuenteDC_Amps: currentData.fuenteDC_Amps,
+                    factorDivider: currentData.factorDivider
+                };
+                
+                const validateResponse = await fetch(`${API_BASE}/config/custom/configurations/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                if (validateResponse.ok) {
+                    showResult('api-test-results', `
+                        ✅ <strong>Configuración actual es válida</strong><br>
+                        • Capacidad: ${config.batteryCapacity}Ah<br>
+                        • Tipo: ${config.isLithium ? 'Litio' : 'GEL/AGM'}<br>
+                        • Voltajes: BULK ${config.bulkVoltage}V, Absorción ${config.absorptionVoltage}V, Flotación ${config.floatVoltage}V
+                    `, 'success');
+                } else {
+                    const errorData = await validateResponse.text();
+                    showResult('api-test-results', `❌ Configuración inválida: ${errorData}`, 'error');
+                }
+                
+            } catch (error) {
+                showResult('api-test-results', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkTroubleshooting() {
+            showLoading('troubleshooting-results', 'Ejecutando diagnóstico...');
+            
+            let issues = [];
+            let successes = [];
+            
+            // Test básico de API
+            try {
+                const apiResponse = await fetch(`${API_BASE}/data`, { timeout: 3000 });
+                if (apiResponse.ok) {
+                    successes.push('✅ API responde correctamente');
+                } else if (apiResponse.status === 429) {
+                    issues.push('⚠️ Rate limit activo - espera unos segundos');
+                } else {
+                    issues.push(`❌ API error HTTP ${apiResponse.status}`);
+                }
+            } catch (e) {
+                issues.push(`❌ API no disponible: ${e.message}`);
+            }
+            
+            // Test de frontend
+            try {
+                const frontendResponse = await fetch('http://localhost:5173', { timeout: 3000 });
+                if (frontendResponse.ok) {
+                    successes.push('✅ Frontend accesible');
+                } else {
+                    issues.push('❌ Frontend no responde');
+                }
+            } catch (e) {
+                issues.push(`❌ Frontend no disponible: ${e.message}`);
+            }
+            
+            // Test de endpoints de configuración
+            try {
+                const configResponse = await fetch(`${API_BASE}/config/custom/configurations/info`, { timeout: 3000 });
+                if (configResponse.ok) {
+                    successes.push('✅ Endpoints de configuración funcionan');
+                } else {
+                    issues.push('❌ Endpoints de configuración no disponibles');
+                }
+            } catch (e) {
+                issues.push(`❌ Endpoints de configuración fallan: ${e.message}`);
+            }
+            
+            let result = '';
+            if (successes.length > 0) {
+                result += '<strong>Funcionando correctamente:</strong><br>' + successes.join('<br>') + '<br><br>';
+            }
+            if (issues.length > 0) {
+                result += '<strong>Problemas detectados:</strong><br>' + issues.join('<br>');
+            }
+            
+            const resultType = issues.length === 0 ? 'success' : (successes.length > 0 ? 'warning' : 'error');
+            showResult('troubleshooting-results', result, resultType);
+        }
+
+        // Auto-ejecutar verificación inicial
+        window.addEventListener('load', () => {
+            setTimeout(checkSystemStatus, 1000);
+        });
+    </script>
+</body>
+</html>
