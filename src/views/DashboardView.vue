@@ -239,12 +239,10 @@
                 <strong>Voltaje objetivo:</strong> <span class="text-blue-600 font-semibold">{{ data.bulkVoltage }} V</span>
               </p>
               <p>
-                Para tu batería de <strong>{{ data.batteryCapacity }} Ah</strong>, aplicamos el 
-                <strong class="text-blue-600">{{ data.thresholdPercentage }}%</strong> de umbral. 
-                Cuando la corriente de carga baje a 
-                <strong class="text-blue-600">{{ calculateThresholdCurrent }} mA</strong> 
-                ({{ data.thresholdPercentage }}% de {{ data.batteryCapacity }}Ah), 
-                el sistema pasará automáticamente de BULK a Absorción.
+                En la etapa BULK, el sistema carga a máxima corriente (hasta {{ data.maxAllowedCurrent }} mA) 
+                hasta alcanzar el voltaje objetivo de <strong class="text-blue-600">{{ data.bulkVoltage }} V</strong>. 
+                Cuando la batería llegue a este voltaje, el sistema pasará automáticamente a la etapa de Absorción.
+                {{ data.useFuenteDC ? `Con fuente DC, también hay límite de tiempo máximo.` : '' }}
               </p>
             </div>
           </div>
@@ -260,11 +258,12 @@
                 <strong>Voltaje mantenido:</strong> <span class="text-yellow-600 font-semibold">{{ data.absorptionVoltage }} V</span>
               </p>
               <p>
-                Durante la absorción, mantenemos {{ data.absorptionVoltage }}V constante. 
-                Cuando la corriente caiga por debajo de 
-                <strong class="text-yellow-600">{{ calculateFloatThreshold }} mA</strong> 
-                ({{ data.thresholdPercentage }}% del umbral actual), 
-                pasaremos a la etapa de Flotación para mantener la batería sin sobrecargarla.
+                Durante la absorción, mantenemos {{ data.absorptionVoltage }}V constante mientras 
+                la corriente disminuye gradualmente. Cuando la corriente <strong>neta</strong> 
+                (carga - consumo) caiga por debajo de 
+                <strong class="text-yellow-600">{{ calculateThresholdCurrent }} mA</strong> 
+                ({{ data.thresholdPercentage }}% de {{ data.batteryCapacity }}Ah × 10), 
+                pasaremos a la etapa de Flotación.
               </p>
             </div>
           </div>
@@ -281,9 +280,10 @@
               </p>
               <p>
                 En flotación, mantenemos la batería a {{ data.floatVoltage }}V para evitar la autodescarga 
-                sin sobrecargarla. La corriente será mínima, típicamente 
-                <strong class="text-green-600">{{ calculateMaintenanceCurrent }} mA o menos</strong>, 
-                suficiente para compensar el autoconsumo de la batería.
+                sin sobrecargarla. El sistema regula automáticamente la corriente para mantener este voltaje.
+                La corriente máxima permitida en esta etapa es de 
+                <strong class="text-green-600">{{ calculateFloatThreshold }} mA</strong> 
+                (límite de {{ calculateThresholdCurrent }} mA ÷ 5).
               </p>
             </div>
           </div>
@@ -365,8 +365,9 @@ const calculateThresholdCurrent = computed(() => {
 
 const calculateFloatThreshold = computed(() => {
   if (!data.value) return 0
-  // Umbral para pasar a flotación = umbral actual * porcentaje
-  return Math.round(calculateThresholdCurrent.value * (data.value.thresholdPercentage / 100))
+  // Umbral para pasar a flotación = umbral de absorción / factorDivider (5)
+  // Según ESP32: currentLimitIntoFloatStage = absorptionCurrentThreshold_mA / factorDivider
+  return Math.round(calculateThresholdCurrent.value / 5)
 })
 
 const calculateMaintenanceCurrent = computed(() => {
