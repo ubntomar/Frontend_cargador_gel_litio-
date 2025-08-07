@@ -187,6 +187,146 @@
           <p class="text-blue-700">{{ data.notaPersonalizada }}</p>
         </div>
       </div>
+
+      <!-- Resumen de Configuración de Carga -->
+      <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-xl shadow-lg p-6 border border-blue-200">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-xl font-bold text-gray-900">⚡ Resumen de Configuración de Carga</h3>
+            <p class="text-gray-600">Cómo está configurado tu sistema para cargar la batería de manera óptima</p>
+          </div>
+        </div>
+
+        <!-- Información de la batería configurada -->
+        <div class="bg-white rounded-lg p-5 mb-6 border border-blue-100">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">🔋</span>
+            <h4 class="text-lg font-semibold text-gray-900">Batería Configurada</h4>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm text-gray-600">Capacidad</p>
+              <p class="text-xl font-bold text-blue-600">{{ data.batteryCapacity }} Ah</p>
+            </div>
+            <div class="text-center p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm text-gray-600">Tecnología</p>
+              <p class="text-xl font-bold" :class="data.isLithium ? 'text-purple-600' : 'text-green-600'">
+                {{ data.isLithium ? '🔋 Litio' : '🟢 GEL/AGM' }}
+              </p>
+            </div>
+            <div class="text-center p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm text-gray-600">Corriente Máxima</p>
+              <p class="text-xl font-bold text-red-600">{{ data.maxAllowedCurrent }} mA</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explicación de las etapas de carga -->
+        <div class="space-y-4">
+          <!-- Etapa BULK -->
+          <div class="bg-white rounded-lg p-5 border-l-4 border-blue-500">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+              <h5 class="text-lg font-semibold text-blue-700">📈 Etapa BULK (Carga Rápida)</h5>
+            </div>
+            <div class="text-gray-700 leading-relaxed">
+              <p class="mb-2">
+                <strong>Voltaje objetivo:</strong> <span class="text-blue-600 font-semibold">{{ data.bulkVoltage }} V</span>
+              </p>
+              <p>
+                Para tu batería de <strong>{{ data.batteryCapacity }} Ah</strong>, aplicamos el 
+                <strong class="text-blue-600">{{ data.thresholdPercentage }}%</strong> de umbral. 
+                Cuando la corriente de carga baje a 
+                <strong class="text-blue-600">{{ calculateThresholdCurrent }} mA</strong> 
+                ({{ data.thresholdPercentage }}% de {{ data.batteryCapacity }}Ah), 
+                el sistema pasará automáticamente de BULK a Absorción.
+              </p>
+            </div>
+          </div>
+
+          <!-- Etapa ABSORPTION -->
+          <div class="bg-white rounded-lg p-5 border-l-4 border-yellow-500">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+              <h5 class="text-lg font-semibold text-yellow-700">⏱️ Etapa ABSORCIÓN (Carga Completa)</h5>
+            </div>
+            <div class="text-gray-700 leading-relaxed">
+              <p class="mb-2">
+                <strong>Voltaje mantenido:</strong> <span class="text-yellow-600 font-semibold">{{ data.absorptionVoltage }} V</span>
+              </p>
+              <p>
+                Durante la absorción, mantenemos {{ data.absorptionVoltage }}V constante. 
+                Cuando la corriente caiga por debajo de 
+                <strong class="text-yellow-600">{{ calculateFloatThreshold }} mA</strong> 
+                ({{ data.thresholdPercentage }}% del umbral actual), 
+                pasaremos a la etapa de Flotación para mantener la batería sin sobrecargarla.
+              </p>
+            </div>
+          </div>
+
+          <!-- Etapa FLOAT -->
+          <div class="bg-white rounded-lg p-5 border-l-4 border-green-500">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+              <h5 class="text-lg font-semibold text-green-700">🌊 Etapa FLOTACIÓN (Mantenimiento)</h5>
+            </div>
+            <div class="text-gray-700 leading-relaxed">
+              <p class="mb-2">
+                <strong>Voltaje de mantenimiento:</strong> <span class="text-green-600 font-semibold">{{ data.floatVoltage }} V</span>
+              </p>
+              <p>
+                En flotación, mantenemos la batería a {{ data.floatVoltage }}V para evitar la autodescarga 
+                sin sobrecargarla. La corriente será mínima, típicamente 
+                <strong class="text-green-600">{{ calculateMaintenanceCurrent }} mA o menos</strong>, 
+                suficiente para compensar el autoconsumo de la batería.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Protecciones activas -->
+        <div class="mt-6 bg-red-50 rounded-lg p-5 border border-red-200">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">🛡️</span>
+            <h4 class="text-lg font-semibold text-red-800">Protecciones Activas</h4>
+          </div>
+          <div class="text-red-700">
+            <p>
+              • <strong>Corriente máxima limitada a:</strong> {{ data.maxAllowedCurrent }} mA<br>
+              • <strong>Protección por temperatura:</strong> Monitoreo continuo a {{ data.temperature }}°C<br>
+              • <strong>Tipo de batería:</strong> Perfiles optimizados para {{ data.isLithium ? 'Litio (LifePO4)' : 'GEL/AGM' }}<br>
+              • <strong>Fuente de energía:</strong> {{ energySourceType }} {{ data.useFuenteDC ? `(${data.fuenteDC_Amps}A máx.)` : '(Solar)' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Estado actual del sistema -->
+        <div class="mt-6 bg-gray-800 text-white rounded-lg p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">📊</span>
+            <h4 class="text-lg font-semibold">Estado Actual del Sistema</h4>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center">
+              <p class="text-gray-300 text-sm">Etapa Actual</p>
+              <p class="text-xl font-bold text-yellow-400">{{ data.chargeState.replace('_', ' ') }}</p>
+            </div>
+            <div class="text-center">
+              <p class="text-gray-300 text-sm">Voltaje de Batería</p>
+              <p class="text-xl font-bold text-blue-400">{{ data.voltageBatterySensor2 }} V</p>
+            </div>
+            <div class="text-center">
+              <p class="text-gray-300 text-sm">Corriente Actual</p>
+              <p class="text-xl font-bold text-green-400">{{ data.panelToBatteryCurrent }} mA</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -214,6 +354,25 @@ const netPower = computed(() => {
 const energySourceType = computed(() => {
   if (!data.value) return 'Desconocido'
   return data.value.useFuenteDC ? 'Fuente DC' : 'Paneles Solares'
+})
+
+// Cálculos para el resumen de configuración
+const calculateThresholdCurrent = computed(() => {
+  if (!data.value) return 0
+  // Umbral = (Capacidad en Ah * 1000 mA/A) * (Porcentaje / 100)
+  return Math.round((data.value.batteryCapacity * 1000) * (data.value.thresholdPercentage / 100))
+})
+
+const calculateFloatThreshold = computed(() => {
+  if (!data.value) return 0
+  // Umbral para pasar a flotación = umbral actual * porcentaje
+  return Math.round(calculateThresholdCurrent.value * (data.value.thresholdPercentage / 100))
+})
+
+const calculateMaintenanceCurrent = computed(() => {
+  if (!data.value) return 0
+  // Corriente de mantenimiento típica = 0.5-2% de la capacidad
+  return Math.round((data.value.batteryCapacity * 1000) * 0.01) // 1% como ejemplo
 })
 
 // Función para formatear el uptime

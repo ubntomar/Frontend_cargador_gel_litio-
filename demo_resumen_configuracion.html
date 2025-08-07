@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - Resumen de Configuración de Carga</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="max-w-4xl mx-auto">
+        <div class="glass rounded-2xl p-6 mb-6">
+            <h1 class="text-3xl font-bold text-white text-center mb-2">🔋 Demo: Resumen de Configuración</h1>
+            <p class="text-white/80 text-center">Ejemplo de cómo se ve la nueva sección en el Dashboard</p>
+        </div>
+
+        <!-- Resumen de Configuración de Carga -->
+        <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-xl shadow-lg p-6 border border-blue-200">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">⚡ Resumen de Configuración de Carga</h3>
+                    <p class="text-gray-600">Cómo está configurado tu sistema para cargar la batería de manera óptima</p>
+                </div>
+            </div>
+
+            <!-- Información de la batería configurada -->
+            <div class="bg-white rounded-lg p-5 mb-6 border border-blue-100">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-2xl">🔋</span>
+                    <h4 class="text-lg font-semibold text-gray-900">Batería Configurada</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center p-3 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Capacidad</p>
+                        <p class="text-xl font-bold text-blue-600">200 Ah</p>
+                    </div>
+                    <div class="text-center p-3 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Tecnología</p>
+                        <p class="text-xl font-bold text-purple-600">🔋 Litio</p>
+                    </div>
+                    <div class="text-center p-3 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Corriente Máxima</p>
+                        <p class="text-xl font-bold text-red-600">15000 mA</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explicación de las etapas de carga -->
+            <div class="space-y-4">
+                <!-- Etapa BULK -->
+                <div class="bg-white rounded-lg p-5 border-l-4 border-blue-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                        <h5 class="text-lg font-semibold text-blue-700">📈 Etapa BULK (Carga Rápida)</h5>
+                    </div>
+                    <div class="text-gray-700 leading-relaxed">
+                        <p class="mb-2">
+                            <strong>Voltaje objetivo:</strong> <span class="text-blue-600 font-semibold">14.6 V</span>
+                        </p>
+                        <p>
+                            Para tu batería de <strong>200 Ah</strong>, aplicamos el 
+                            <strong class="text-blue-600">3%</strong> de umbral. 
+                            Cuando la corriente de carga baje a 
+                            <strong class="text-blue-600">6000 mA</strong> 
+                            (3% de 200Ah), 
+                            el sistema pasará automáticamente de BULK a Absorción.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Etapa ABSORPTION -->
+                <div class="bg-white rounded-lg p-5 border-l-4 border-yellow-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                        <h5 class="text-lg font-semibold text-yellow-700">⏱️ Etapa ABSORCIÓN (Carga Completa)</h5>
+                    </div>
+                    <div class="text-gray-700 leading-relaxed">
+                        <p class="mb-2">
+                            <strong>Voltaje mantenido:</strong> <span class="text-yellow-600 font-semibold">14.6 V</span>
+                        </p>
+                        <p>
+                            Durante la absorción, mantenemos 14.6V constante. 
+                            Cuando la corriente caiga por debajo de 
+                            <strong class="text-yellow-600">180 mA</strong> 
+                            (3% del umbral actual), 
+                            pasaremos a la etapa de Flotación para mantener la batería sin sobrecargarla.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Etapa FLOAT -->
+                <div class="bg-white rounded-lg p-5 border-l-4 border-green-500">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                        <h5 class="text-lg font-semibold text-green-700">🌊 Etapa FLOTACIÓN (Mantenimiento)</h5>
+                    </div>
+                    <div class="text-gray-700 leading-relaxed">
+                        <p class="mb-2">
+                            <strong>Voltaje de mantenimiento:</strong> <span class="text-green-600 font-semibold">13.8 V</span>
+                        </p>
+                        <p>
+                            En flotación, mantenemos la batería a 13.8V para evitar la autodescarga 
+                            sin sobrecargarla. La corriente será mínima, típicamente 
+                            <strong class="text-green-600">2000 mA o menos</strong>, 
+                            suficiente para compensar el autoconsumo de la batería.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Protecciones activas -->
+            <div class="mt-6 bg-red-50 rounded-lg p-5 border border-red-200">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-2xl">🛡️</span>
+                    <h4 class="text-lg font-semibold text-red-800">Protecciones Activas</h4>
+                </div>
+                <div class="text-red-700">
+                    <p>
+                        • <strong>Corriente máxima limitada a:</strong> 15000 mA<br>
+                        • <strong>Protección por temperatura:</strong> Monitoreo continuo a 25°C<br>
+                        • <strong>Tipo de batería:</strong> Perfiles optimizados para Litio (LifePO4)<br>
+                        • <strong>Fuente de energía:</strong> Paneles Solares (Solar)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Estado actual del sistema -->
+            <div class="mt-6 bg-gray-800 text-white rounded-lg p-5">
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-2xl">📊</span>
+                    <h4 class="text-lg font-semibold">Estado Actual del Sistema</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <p class="text-gray-300 text-sm">Etapa Actual</p>
+                        <p class="text-xl font-bold text-yellow-400">BULK CHARGE</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-300 text-sm">Voltaje de Batería</p>
+                        <p class="text-xl font-bold text-blue-400">14.2 V</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-300 text-sm">Corriente Actual</p>
+                        <p class="text-xl font-bold text-green-400">8500 mA</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="glass rounded-2xl p-6 mt-6">
+            <h2 class="text-xl font-bold text-white mb-4">💡 ¿Cómo funciona?</h2>
+            <div class="text-white/90 space-y-3">
+                <p>
+                    <strong>🔄 Transiciones automáticas:</strong> El sistema cambia de etapa automáticamente basándose en la corriente de carga.
+                </p>
+                <p>
+                    <strong>📊 Cálculos dinámicos:</strong> Los umbrales se calculan como porcentaje de la capacidad total de la batería.
+                </p>
+                <p>
+                    <strong>🛡️ Protección inteligente:</strong> Cada tipo de batería (Litio/GEL) tiene perfiles específicos para máxima vida útil.
+                </p>
+                <p>
+                    <strong>🎯 Optimización continua:</strong> El sistema monitorea temperatura y voltaje para ajustar la carga dinámicamente.
+                </p>
+            </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="flex gap-4 mt-6 justify-center">
+            <button onclick="window.location.href='http://localhost:5173'" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                🚀 Ver Dashboard Real
+            </button>
+            <button onclick="location.reload()" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                🔄 Recargar Demo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Agregar animaciones de entrada
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = document.querySelectorAll('.bg-white');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+        });
+    </script>
+</body>
+</html>
