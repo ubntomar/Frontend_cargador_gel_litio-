@@ -283,7 +283,7 @@
                 sin sobrecargarla. El sistema regula automáticamente la corriente para mantener este voltaje.
                 La corriente máxima permitida en esta etapa es de 
                 <strong class="text-green-600">{{ calculateFloatThreshold }} mA</strong> 
-                (límite de {{ calculateThresholdCurrent }} mA ÷ 5).
+                (límite de {{ calculateThresholdCurrent }} mA ÷ {{ data.factorDivider }}).
               </p>
             </div>
           </div>
@@ -364,10 +364,10 @@ const calculateThresholdCurrent = computed(() => {
 })
 
 const calculateFloatThreshold = computed(() => {
-  if (!data.value) return 0
-  // Umbral para pasar a flotación = umbral de absorción / factorDivider (5)
+  if (!data.value || !data.value.factorDivider) return 0
+  // Umbral para pasar a flotación = umbral de absorción / factorDivider (valor real desde ESP32)
   // Según ESP32: currentLimitIntoFloatStage = absorptionCurrentThreshold_mA / factorDivider
-  return Math.round(calculateThresholdCurrent.value / 5)
+  return Math.round(calculateThresholdCurrent.value / data.value.factorDivider)
 })
 
 const calculateMaintenanceCurrent = computed(() => {
