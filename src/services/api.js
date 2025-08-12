@@ -184,7 +184,7 @@ export const api = {
 
   // Configuraciones personalizadas
   async saveConfigurationFile(name, configData) {
-    const response = await apiClient.post(`/config/custom/configurations/${name}`, configData)
+    const response = await apiClient.post(`/config/custom/config/${name}`, configData)
     return response.data
   },
 
@@ -194,7 +194,7 @@ export const api = {
   },
 
   async deleteConfiguration(name) {
-    const response = await apiClient.delete(`/config/custom/configurations/${name}`)
+    const response = await apiClient.delete(`/config/custom/config/${name}`)
     return response.data
   },
 
