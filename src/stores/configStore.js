@@ -170,8 +170,11 @@ export const useConfigStore = defineStore('config', () => {
       const response = await api.validateConfiguration(config)
       return response
     } catch (err) {
-      error.value = err.message
-      throw err
+      // Si la API responde con error de validación, mostrar el mensaje específico
+      const apiMsg = err.response?.data?.msg
+      error.value = apiMsg || err.message
+      // Lanzar el error con el mensaje más útil
+      throw new Error(apiMsg || err.message)
     }
   }
 
