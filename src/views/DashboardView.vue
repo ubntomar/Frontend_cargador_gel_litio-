@@ -162,7 +162,7 @@
 
           <div v-if="data.pwm" class="bg-white rounded-lg shadow p-4">
             <p class="text-sm text-gray-600">PWM Actual</p>
-            <p class="text-xl font-semibold">{{ data.pwm }} %</p>
+            <p class="text-xl font-semibold">{{ data.pwm }}</p>
           </div>
         </div>
 
