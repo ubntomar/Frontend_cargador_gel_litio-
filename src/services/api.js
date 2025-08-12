@@ -63,9 +63,20 @@ apiClient.interceptors.response.use(
       console.error('❌ API Error:', error.config?.url, error.message)
     }
     // Si la API responde con un mensaje de validación, adjuntarlo al error
-    if (error.response && error.response.data && error.response.data.msg) {
-      error.message = error.response.data.msg
-      error.toString = () => error.response.data.msg
+    if (error.response && error.response.data) {
+      // Caso 1: msg directo
+      if (error.response.data.msg) {
+        error.message = error.response.data.msg
+        error.toString = () => error.response.data.msg
+      }
+      // Caso 2: detail como array (Pydantic)
+      else if (Array.isArray(error.response.data.detail) && error.response.data.detail.length > 0) {
+        const detailMsg = error.response.data.detail[0]?.msg
+        if (detailMsg) {
+          error.message = detailMsg
+          error.toString = () => detailMsg
+        }
+      }
     }
     console.error('API Error:', error)
     return Promise.reject(error)
