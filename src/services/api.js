@@ -65,6 +65,7 @@ apiClient.interceptors.response.use(
     // Si la API responde con un mensaje de validación, adjuntarlo al error
     if (error.response && error.response.data && error.response.data.msg) {
       error.message = error.response.data.msg
+      error.toString = () => error.response.data.msg
     }
     console.error('API Error:', error)
     return Promise.reject(error)
