@@ -38,12 +38,12 @@
         />
         
         <MetricCard
-          title="Corriente de Carga"
-          :value="data.panelToBatteryCurrent"
+          title="Dispositivo conectado"
+          :value="data.batteryToLoadCurrent"
           unit="mA"
-          :subtitle="data.chargeState !== 'ERROR' ? 'Cargando' : 'Error'"
-          :icon-bg-class="data.chargeState !== 'ERROR' ? 'bg-green-100' : 'bg-red-100'"
-          :icon-class="data.chargeState !== 'ERROR' ? 'text-green-600' : 'text-red-600'"
+          :subtitle="''"
+          :icon-bg-class="'bg-green-100'"
+          :icon-class="'text-green-600'"
         />
         
         <MetricCard
