@@ -199,7 +199,12 @@ export const api = {
   },
 
   async applyConfiguration(name) {
-    const response = await apiClient.post(`/config/custom/configurations/${name}/apply`)
+    const response = await apiClient.post(`/config/custom/config/${name}/apply`)
+    return response.data
+  },
+
+  async getConfiguration(name) {
+    const response = await apiClient.get(`/config/custom/config/${name}`)
     return response.data
   },
 
