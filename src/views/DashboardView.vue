@@ -159,6 +159,11 @@
             <p class="text-sm text-gray-600">Última Actualización</p>
             <p class="text-sm font-semibold">{{ formatLastUpdate(data.last_update) }}</p>
           </div>
+
+          <div v-if="data.pwm" class="bg-white rounded-lg shadow p-4">
+            <p class="text-sm text-gray-600">PWM Actual</p>
+            <p class="text-xl font-semibold">{{ data.pwm }} %</p>
+          </div>
         </div>
 
         <!-- Información adicional de carga -->
